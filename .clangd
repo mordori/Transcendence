@@ -1,7 +1,19 @@
 CompileFlags:
-    Add: [-Iinc, -Iutils, -std=c++20, -Wall, -Wextra, -Werror]
-    Remove: [--use-port=*, -s*]
+  Add:
+    - "-Iinc"
+    - "-Iutils"
+    - "-std=c++20"
+    - "-Wall"
+    - "-Wextra"
+    - "-Werror"
+    - "-D__EMSCRIPTEN__=1"
+    # Emscripten
+    # - "--target=wasm32-unknown-emscripten"
+    # - "--sysroot=/home/mikax/tools/emsdk/upstream/emscripten/cache/sysroot"
+  Remove:
+    - "--use-port=*"
+    - "-s*"
 
 Diagnostics:
-    UnusedIncludes: Strict
-    MissingIncludes: Strict
+  UnusedIncludes: Strict
+  MissingIncludes: Strict

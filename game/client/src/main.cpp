@@ -22,13 +22,17 @@
 #include <entt/entt.hpp>
 #include <iostream>
 
+#include "box3d/id.h"
+#include "box3d/types.h"
 #include "components/input.hpp"
+#include "components/physics.hpp"
 #include "entt/entity/fwd.hpp"
 #include "systems/input.hpp"
 #include "systems/physics.hpp"
 
 #ifdef __EMSCRIPTEN__
 #include <emscripten.h>
+#include <emscripten/emscripten.h>
 #include <emscripten/html5.h>
 #endif
 
@@ -46,16 +50,31 @@ void main_loop(void* arg) {
 
 int main() {
 	std::cout << "--- Standalone Player Starting ---\n";
-	auto* state{ new GameState{} };
+	auto* state{ new GameState() };
+
+	core::systems::setup_physics(state->registry);
+	auto world_id{ state->registry.ctx().get<World>().id };
+
 	auto local_player{ state->registry.create() };
 	state->registry.emplace<InputComponent>(local_player);
+
+	b3BodyDef body_def{ b3DefaultBodyDef() };
+	body_def.type = b3_dynamicBody;
+	body_def.position = { .x = 0.0f, .y = 10.0f, .z = 0.0f };
+	b3BodyId body_id{ b3CreateBody(world_id, &body_def) };
+
+	b3ShapeDef shape_def{ b3DefaultShapeDef() };
+	b3Sphere sphere{ .center = {}, .radius = 1.0f };
+	b3CreateSphereShape(body_id, &shape_def, &sphere);
+
+	state->registry.emplace<RigidBody>(local_player, body_id);
+
 	client::systems::setup_input(state->registry, local_player);
 #ifdef __EMSCRIPTEN__
-	emscripten_set_main_loop_arg(main_loop, state, 0, 1);
+	emscripten_set_main_loop_arg(main_loop, state, 0, true);
 #else
-	while (state->is_running) {
-		main_loop(state);
-	}
+	std::cerr << "Error: Emscripten not found!";
+	return 1;
 #endif
 	return 0;
 }
