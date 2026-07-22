@@ -1,0 +1,7 @@
+cgltf
+ozz-animation
+stb_image
+emscripten.h
+emscripten/html5.h
+tweeny
+webgpu/webgpu_cpp.h

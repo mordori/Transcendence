@@ -1,0 +1,77 @@
+services:
+  nginx:
+    build:
+      context: ./nginx
+    restart: unless-stopped
+    ports:
+      - "443:443"
+      - "80:80"
+    depends_on:
+      - frontend
+      - backend
+      - game-server
+    networks:
+      - transcendence
+
+  frontend:
+    build:
+      context: .
+      dockerfile: ./frontend/Dockerfile
+    restart: unless-stopped
+    networks:
+      - transcendence
+
+  backend:
+    build:
+      context: ./backend
+    restart: unless-stopped
+    environment:
+      - name=value
+    depends_on:
+      - database
+      - redis
+    networks:
+      - transcendence
+
+  game-server:
+    build:
+      context: .
+      dockerfile: ./game/server/Dockerfile
+    restart: unless-stopped
+    environment:
+      - name=value
+    depends_on:
+      - redis
+    networks:
+      - transcendence
+
+  game-ai:
+    build:
+      context: .
+      dockerfile: ./game/ai/Dockerfile
+    restart: unless-stopped
+    networks:
+      - transcendence
+
+  database:
+    image:
+    environment:
+      - name=value
+    volumes:
+      -
+    networks:
+      - transcendence
+
+  redis:
+    image:
+    networks:
+      - transcendence
+
+networks:
+  transcendence:
+    driver: bridge
+
+volumes:
+  pgdata:
+
+secrets:

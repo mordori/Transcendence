@@ -1,0 +1,12 @@
+# .env
+# secrets/
+
+.vscode/
+build/
+build-*/
+out/
+.cache/
+.clangd/
+
+.DS_Store
+compile_commands.json

@@ -1,0 +1,6 @@
+CompileFlags:
+    Add: [-Iinc, -Iutils, -std=c++20, -Wall, -Wextra, -Werror]
+
+Diagnostics:
+    UnusedIncludes: Strict
+    MissingIncludes: Strict
