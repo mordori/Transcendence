@@ -32,6 +32,7 @@ FetchContent_MakeAvailable(glaze)
 
 add_library(${TARGET_NAME} STATIC
 	src/factories.cpp
+	src/utils/files.cpp
 	src/systems/physics.cpp
 )
 
@@ -42,7 +43,10 @@ target_link_libraries(${TARGET_NAME} PUBLIC
 	glaze::glaze
 )
 
-target_include_directories(${TARGET_NAME} PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include)
+target_include_directories(${TARGET_NAME} PUBLIC
+	${CMAKE_CURRENT_SOURCE_DIR}/include
+	${CMAKE_CURRENT_SOURCE_DIR}/lib
+)
 
 target_compile_options(${TARGET_NAME} PRIVATE
 	-Wall -Wextra -Werror -pedantic

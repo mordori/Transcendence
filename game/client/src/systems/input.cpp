@@ -7,8 +7,8 @@
 #include "entt/entity/fwd.hpp"
 
 #ifdef __EMSCRIPTEN__
-#include <emscripten/em_types.h>
-#include <emscripten/html5.h>
+#include "emscripten/em_types.h"
+#include "emscripten/html5.h"
 #endif
 
 namespace client::systems {

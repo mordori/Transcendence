@@ -1,12 +1,11 @@
 #pragma once
 
-#include <glaze/core/common.hpp>
-#include <glaze/core/meta.hpp>
-#include <glaze/glaze.hpp>
-#include <glm/glm.hpp>
-#include <glm/gtc/quaternion.hpp>
-
+#include "glaze/core/common.hpp"
+#include "glaze/core/meta.hpp"
+#include "glaze/glaze.hpp"
 #include "glm/fwd.hpp"
+#include "glm/glm.hpp"
+#include "glm/gtc/quaternion.hpp"
 
 template <>
 struct glz::meta<glm::vec2> {

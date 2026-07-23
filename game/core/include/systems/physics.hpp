@@ -1,8 +1,7 @@
 #pragma once
 
-#include <entt/entt.hpp>
-
 #include "entt/entity/fwd.hpp"
+#include "entt/entt.hpp"
 
 namespace core::systems {
 void setup_physics(entt::registry& registry);
