@@ -12,6 +12,7 @@
 #endif
 
 namespace client::systems {
+
 struct LocalPlayerCtx {
 	entt::entity id;
 };

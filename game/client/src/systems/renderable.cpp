@@ -15,6 +15,7 @@
 #include "webgpu/webgpu_cpp.h"
 
 namespace client::systems {
+
 Renderable create_renderable(const MeshData& mesh) {
 	Renderable r{};
 	auto& ctx = get_render_context();

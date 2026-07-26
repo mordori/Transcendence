@@ -5,6 +5,7 @@
 #include <string>
 
 namespace core::utils {
+
 std::optional<std::string> load_file(const std::string& filepath) {
 	std::ifstream file{ filepath };
 	if (!file.is_open()) {

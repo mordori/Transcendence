@@ -12,6 +12,7 @@
 #include "entt/entity/fwd.hpp"
 
 namespace core::systems {
+
 void setup_physics(entt::registry& registry) {
 	b3WorldDef def{ b3DefaultWorldDef() };
 	b3WorldId id{ b3CreateWorld(&def) };

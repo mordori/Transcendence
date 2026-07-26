@@ -4,5 +4,6 @@
 #include "entt/entt.hpp"
 
 namespace client::systems {
+
 void setup_input(entt::registry& registry, entt::entity local_player);
 }
