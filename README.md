@@ -45,7 +45,7 @@ docker run -d -p 8080:80 --name frontend frontend
 ## Run
 Open in your web browser
 ```
-http://localhost:8080/client.html
+http://localhost:8080
 ```
 
 To stop the web server
