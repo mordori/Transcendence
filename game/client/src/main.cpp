@@ -18,18 +18,18 @@
 // }
 
 #include <iostream>
+#include <utility>
 
-#include "box3d/box3d.h"
 #include "box3d/id.h"
-#include "box3d/types.h"
-#include "components/input.hpp"
 #include "components/physics.hpp"
+#include "components/renderable.hpp"
 #include "entt/entity/fwd.hpp"
 #include "entt/entt.hpp"
 #include "factories.hpp"
 #include "systems/input.hpp"
 #include "systems/physics.hpp"
 #include "systems/render.hpp"
+#include "systems/renderable.hpp"
 
 #ifdef __EMSCRIPTEN__
 #include "emscripten.h"
@@ -51,6 +51,11 @@ void main_loop(void* arg) {
 }
 
 int main() {
+#ifndef __EMSCRIPTEN__
+	std::cerr << "Error: Emscripten not found!";
+	return 1;
+#endif
+
 	std::cout << "--- Standalone Player Starting ---\n";
 	auto* state{ new GameState() };
 
@@ -61,18 +66,24 @@ int main() {
 	auto local_player{ core::factories::spawn_player(state->registry, world_id) };
 
 	client::systems::setup_input(state->registry, local_player);
-#ifdef __EMSCRIPTEN__
-	client::systems::init_webgpu([state](bool success) {
+
+	client::systems::init_webgpu([state, local_player](bool success) {
 		if (!success) {
 			emscripten_force_exit(1);
 			return;
 		}
+
+		auto mesh_ball = client::systems::load_mesh("/models/ball.glb");
+		if (!mesh_ball.has_value()) {
+			emscripten_force_exit(1);
+			return;
+		}
+		auto renderable_ball = client::systems::create_renderable(mesh_ball.value());
+		state->registry.emplace<Renderable>(local_player, std::move(renderable_ball));
+
 		emscripten_set_main_loop_arg(main_loop, state, 0, false);
 	});
 	emscripten_exit_with_live_runtime();
-#else
-	std::cerr << "Error: Emscripten not found!";
-	return 1;
-#endif
+
 	return 0;
 }

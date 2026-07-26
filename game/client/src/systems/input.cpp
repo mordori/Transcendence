@@ -16,8 +16,6 @@ struct LocalPlayerCtx {
 	entt::entity id;
 };
 
-#ifdef __EMSCRIPTEN__
-
 EM_BOOL key_callback(int eventType, const EmscriptenKeyboardEvent* e, void* userData) {
 	auto* registry{ static_cast<entt::registry*>(userData) };
 
@@ -54,7 +52,6 @@ EM_BOOL key_callback(int eventType, const EmscriptenKeyboardEvent* e, void* user
 
 	return handled ? EM_TRUE : EM_FALSE;
 }
-#endif
 
 void setup_input(entt::registry& registry, entt::entity local_player) {
 	registry.ctx().emplace<LocalPlayerCtx>(local_player);

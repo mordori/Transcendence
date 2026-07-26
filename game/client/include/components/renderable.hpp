@@ -1,14 +1,9 @@
 #pragma once
 
 #include <cstdint>
+#include <vector>
 
-#include "glm/ext/matrix_float4x4.hpp"
-#include "glm/glm.hpp"
 #include "webgpu/webgpu_cpp.h"
-
-struct Transform {
-	glm::mat4 mvp;
-};
 
 struct Renderable {
 	wgpu::Buffer vertexBuffer{};
@@ -16,4 +11,9 @@ struct Renderable {
 	uint32_t indexCount{};
 	wgpu::Buffer uniformBuffer{};
 	wgpu::BindGroup bindGroup{};
+};
+
+struct MeshData {
+	std::vector<float> vertices;
+	std::vector<uint16_t> indices;
 };

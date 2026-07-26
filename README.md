@@ -2,10 +2,19 @@
 
 ## Pre-requisites
 
-CMake, python3
+CMake, curl
 ``` bash
 sudo apt update && sudo apt upgrade
-sudo apt install cmake python3 -y
+sudo apt install cmake curl -y
+```
+
+Docker
+``` bash
+curl -fsSL https://get.docker.com -o get-docker.sh
+sudo sh get-docker.sh
+rm get-docker.sh
+sudo usermod -aG docker $USER
+newgrp docker
 ```
 
 Emscripten
@@ -22,18 +31,24 @@ source ./emsdk_env.sh
 For now it's just a first playable with local player
 
 ``` bash
-cd game
-emcmake cmake -S . -B build
-ln -sf build/compile_commands.json compile_commands.json
-cmake --build build
+emcmake cmake -S game -B game/build
+ln -sf game/build/compile_commands.json game/compile_commands.json
+cmake --build game/build
+```
+
+Builds and start local web server
+``` docker
+docker build -t frontend frontend/
+docker run -d -p 8080:80 --name frontend frontend
 ```
 
 ## Run
-Start local web server
-``` python
-python3 -m http.server -d build/client
-```
 Open in your web browser
 ```
-http://localhost:8000/client.html
+http://localhost:8080/client.html
+```
+
+To stop the web server
+``` docker
+docker stop frontend
 ```

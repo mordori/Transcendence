@@ -16,6 +16,7 @@ struct RenderContext {
 	wgpu::Queue queue{};
 	wgpu::RenderPipeline pipeline{};
 	wgpu::BindGroupLayout bindGroupLayout{};
+	float aspect{};
 };
 
 RenderContext& get_render_context();
