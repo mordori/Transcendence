@@ -1,77 +1,78 @@
 services:
-  nginx:
-    build:
-      context: ./nginx
-    restart: unless-stopped
-    ports:
-      - "443:443"
-      - "80:80"
-    depends_on:
-      - frontend
-      - backend
-      - game-server
-    networks:
-      - transcendence
-
   frontend:
     build:
-      context: .
-      dockerfile: ./frontend/Dockerfile
-    restart: unless-stopped
+      context: ./frontend
+    container_name: frontend
+    ports:
+      - "8080:80"
     networks:
-      - transcendence
+      - network
 
-  backend:
-    build:
-      context: ./backend
-    restart: unless-stopped
-    environment:
-      - name=value
-    depends_on:
-      - database
-      - redis
-    networks:
-      - transcendence
+  # nginx:
+  #   build:
+  #     context: ./nginx
+  #   restart: unless-stopped
+  #   ports:
+  #     - "443:443"
+  #     - "80:80"
+  #   depends_on:
+  #     - frontend
+  #     - backend
+  #     - game-server
+  #   networks:
+  #     - network
 
-  game-server:
-    build:
-      context: .
-      dockerfile: ./game/server/Dockerfile
-    restart: unless-stopped
-    environment:
-      - name=value
-    depends_on:
-      - redis
-    networks:
-      - transcendence
+  # backend:
+  #   build:
+  #     context: ./backend
+  #   restart: unless-stopped
+  #   environment:
+  #     - name=value
+  #   depends_on:
+  #     - database
+  #     - redis
+  #   networks:
+  #     - network
 
-  game-ai:
-    build:
-      context: .
-      dockerfile: ./game/ai/Dockerfile
-    restart: unless-stopped
-    networks:
-      - transcendence
+  # game-server:
+  #   build:
+  #     context: .
+  #     dockerfile: ./game/server/Dockerfile
+  #   restart: unless-stopped
+  #   environment:
+  #     - name=value
+  #   depends_on:
+  #     - redis
+  #   networks:
+  #     - network
 
-  database:
-    image:
-    environment:
-      - name=value
-    volumes:
-      -
-    networks:
-      - transcendence
+  # game-ai:
+  #   build:
+  #     context: .
+  #     dockerfile: ./game/ai/Dockerfile
+  #   restart: unless-stopped
+  #   networks:
+  #     - network
 
-  redis:
-    image:
-    networks:
-      - transcendence
+  # database:
+  #   image:
+  #   environment:
+  #     - name=value
+  #   volumes:
+  #     -
+  #   networks:
+  #     - network
+
+  # redis:
+  #   image:
+  #   networks:
+  #     - network
 
 networks:
-  transcendence:
+  network:
     driver: bridge
 
-volumes:
-  pgdata:
+# volumes:
+#   pgdata:
 
-secrets:
+# secrets:
