@@ -9,6 +9,7 @@
 
 #define CGLTF_IMPLEMENTATION
 #include "cgltf.h"
+#include "components/physics.hpp"
 #include "glm/ext/matrix_float4x4.hpp"
 #include "systems/render.hpp"
 #include "systems/renderable.hpp"

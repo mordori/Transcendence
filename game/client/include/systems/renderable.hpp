@@ -3,6 +3,7 @@
 #include <optional>
 #include <string>
 
+#include "components/physics.hpp"
 #include "components/renderable.hpp"
 
 namespace client::systems {

@@ -1,7 +1,7 @@
 #include "systems/physics.hpp"
 
+#include <algorithm>
 #include <cmath>
-#include <iostream>
 
 #include "box3d/box3d.h"
 #include "box3d/id.h"
@@ -10,6 +10,8 @@
 #include "components/input.hpp"
 #include "components/physics.hpp"
 #include "entt/entity/fwd.hpp"
+#include "glm/ext/quaternion_trigonometric.hpp"
+#include "glm/ext/vector_float3.hpp"
 
 namespace core::systems {
 
@@ -21,34 +23,57 @@ void setup_physics(entt::registry& registry) {
 
 void update_physics(entt::registry& registry, float dt) {
 	auto world_id{ registry.ctx().get<World>().id };
-	auto input_view = registry.view<InputComponent, RigidBody>();
-	for (auto entity : input_view) {
-		auto& input = input_view.get<InputComponent>(entity);
-		auto& rb = input_view.get<RigidBody>(entity);
-
-		float move_x = 0.0f;
-		float move_z = 0.0f;
+	auto input_view = registry.view<InputComponent, RigidBody, Transform>();
+	for (auto [entity, input, rb, transform] : input_view.each()) {
+		float move = 0.0f;
+		float turn = 0.0f;
 
 		if (input.up)
-			move_z -= 1.0f;
+			move += 1.0f;
 		if (input.down)
-			move_z += 1.0f;
+			move -= 1.0f;
 		if (input.left)
-			move_x -= 1.0f;
+			turn -= 1.0f;
 		if (input.right)
-			move_x += 1.0f;
+			turn += 1.0f;
 
-		if (move_x != 0.0f && move_z != 0.0f) {
-			float length = std::sqrt((move_x * move_x) + (move_z * move_z));
-			move_x /= length;
-			move_z /= length;
+		float turnSpeed{ 0.5f };
+		float maxTurn{ 0.5f };
+
+		if (turn != 0.0f) {
+			input.steering_angle = -turn * turnSpeed;
+			input.steering_angle = std::clamp(input.steering_angle, -maxTurn, maxTurn);
+		} else {
+			input.steering_angle = std::lerp(input.steering_angle, 0.0f, 10.0f * dt);
 		}
 
-		float speed{ 5.0f };
-		b3Vec3 force{ .x = move_x * speed, .y = 0.0f, .z = move_z * speed };
+		float turnSharpness{ 2.5f };
+		input.yaw += input.steering_angle * turnSharpness * dt;
+		transform.rot = glm::angleAxis(input.yaw, glm::vec3(0.0f, 1.0f, 0.0f));
 
+		glm::vec3 fwd_glm = transform.rot * glm::vec3(0.0f, 0.0f, -1.0f);
+		b3Vec3 forward{ //
+			.x = fwd_glm.x,
+			.y = fwd_glm.y,
+			.z = fwd_glm.z
+		};
+
+		move = std::max(move, -0.6f);
+		float moveSpeed{ 40.0f };
+		b3Vec3 force{ //
+			.x = forward.x * move * moveSpeed,
+			.y = 0.0f,
+			.z = forward.z * move * moveSpeed
+		};
 		if (force.x != 0.0f || force.z != 0.0f)
 			b3Body_ApplyForceToCenter(rb.id, force, true);
+
+		b3Vec3 body_pos{ b3Body_GetPosition(rb.id) };
+		if (input.jump && body_pos.y < 1.0f) {
+			b3Vec3 jumpForce{ .x = 0.0f, .y = 3000.0f, .z = 0.0f };
+			b3Body_ApplyForceToCenter(rb.id, jumpForce, true);
+			input.jump = false;
+		}
 	}
 	b3World_Step(world_id, dt, 4);
 
@@ -58,10 +83,12 @@ void update_physics(entt::registry& registry, float dt) {
 		auto& rb = transform_view.get<RigidBody>(entity);
 
 		b3Vec3 pos = b3Body_GetPosition(rb.id);
-		b3Quat rot = b3Body_GetRotation(rb.id);
-
 		transform.pos = { pos.x, pos.y, pos.z };
-		transform.rot = { rot.s, rot.v.x, rot.v.y, rot.v.z };
+
+		if (!registry.all_of<PlayerTag>(entity)) {
+			b3Quat rot = b3Body_GetRotation(rb.id);
+			transform.rot = { rot.s, rot.v.x, rot.v.y, rot.v.z };
+		}
 	}
 }
 }

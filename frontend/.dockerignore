@@ -5,3 +5,4 @@ dist-ssr/
 .gitignore
 Dockerfile
 *.local
+.DS_Store

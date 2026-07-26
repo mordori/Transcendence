@@ -1,6 +1,9 @@
 #include "systems/render.hpp"
 
+#include <sys/types.h>
+
 #include <array>
+#include <cmath>
 #include <cstdint>
 #include <functional>
 #include <iostream>
@@ -8,6 +11,7 @@
 #include <string>
 #include <utility>
 
+#include "components/input.hpp"
 #include "components/physics.hpp"
 #include "components/renderable.hpp"
 #include "entt/entity/fwd.hpp"
@@ -47,6 +51,20 @@ void resize_surface() {
 	ctx.config.usage = wgpu::TextureUsage::RenderAttachment;
 	ctx.config.alphaMode = wgpu::CompositeAlphaMode::Auto;
 	ctx.surface.Configure(&ctx.config);
+
+	wgpu::TextureDescriptor depth_desc{};
+	depth_desc.dimension = wgpu::TextureDimension::e2D;
+	depth_desc.size = { //
+		.width = ctx.config.width,
+		.height = ctx.config.height,
+		.depthOrArrayLayers = 1
+	};
+	depth_desc.mipLevelCount = 1;
+	depth_desc.sampleCount = 1;
+	depth_desc.format = wgpu::TextureFormat::Depth24Plus;
+	depth_desc.usage = wgpu::TextureUsage::RenderAttachment;
+	ctx.depthTexture = ctx.device.CreateTexture(&depth_desc);
+	ctx.depthView = ctx.depthTexture.CreateView();
 }
 
 EM_BOOL on_window_resize(int eventType, const EmscriptenUiEvent* uiEvent, void* userData) {
@@ -165,7 +183,7 @@ bool CreateRenderPipeline() {
 	wgpu::RenderPipelineDescriptor pipeline_desc{};
 	pipeline_desc.layout = pipeline_layout;
 
-	// Vertex State
+	// Vertex
 	wgpu::VertexState vertex_state{};
 	vertex_state.module = shader;
 	vertex_state.entryPoint = "vertex";
@@ -186,7 +204,7 @@ bool CreateRenderPipeline() {
 	vertex_state.buffers = &vertex_layout;
 	pipeline_desc.vertex = vertex_state;
 
-	// Fragment State
+	// Fragment
 	wgpu::FragmentState fragment_state{};
 	fragment_state.module = shader;
 	fragment_state.entryPoint = "fragment";
@@ -198,7 +216,14 @@ bool CreateRenderPipeline() {
 	fragment_state.targets = &color_target;
 	pipeline_desc.fragment = &fragment_state;
 
-	// Primitive State
+	// Depth
+	wgpu::DepthStencilState depth_state{};
+	depth_state.format = wgpu::TextureFormat::Depth24Plus;
+	depth_state.depthWriteEnabled = true;
+	depth_state.depthCompare = wgpu::CompareFunction::Less;
+	pipeline_desc.depthStencil = &depth_state;
+
+	// Primitive
 	pipeline_desc.primitive.topology = wgpu::PrimitiveTopology::TriangleList;
 	pipeline_desc.primitive.cullMode = wgpu::CullMode::Back;
 
@@ -223,25 +248,56 @@ void render(entt::registry& registry) {
 	color_attachment.storeOp = wgpu::StoreOp::Store;
 	color_attachment.clearValue = { .r = 0.0, .g = 0.0, .b = 0.0, .a = 1.0 };
 
+	wgpu::RenderPassDepthStencilAttachment depth_attachment{};
+	depth_attachment.depthLoadOp = wgpu::LoadOp::Clear;
+	depth_attachment.depthStoreOp = wgpu::StoreOp::Store;
+	depth_attachment.depthClearValue = 1.0f;
+	depth_attachment.view = ctx.depthView;
+
 	wgpu::RenderPassDescriptor render_pass_desc{};
 	render_pass_desc.colorAttachmentCount = 1;
 	render_pass_desc.colorAttachments = &color_attachment;
+	render_pass_desc.depthStencilAttachment = &depth_attachment;
 
 	wgpu::CommandEncoder encoder = ctx.device.CreateCommandEncoder();
 	wgpu::RenderPassEncoder pass = encoder.BeginRenderPass(&render_pass_desc);
 	pass.SetPipeline(ctx.pipeline);
 
-	glm::mat4 proj = glm::perspective(glm::radians(45.0f), ctx.aspect, 0.1f, 100.0f);
-	glm::mat4 view = glm::lookAt(  //
-		glm::vec3(0.0f, 5.0f, 10.0f),
-		glm::vec3(0.0f, 0.0f, 0.0f),
-		glm::vec3(0.0f, 1.0f, 0.0f));
+	glm::vec3 camera_pos{ 0.0f, 5.0f, 10.0f };
+	glm::vec3 target_pos{ 0.0f, 0.0f, 0.0f };
+
+	auto player_view = registry.view<const PlayerTag, const Transform, const InputComponent>();
+	for (auto [entity, transform, input] : player_view.each()) {
+		// glm::vec3 forward{ transform.rot * glm::vec3{ 0.0f, 0.0f, -1.0f } };
+		glm::vec3 up = glm::vec3{ 0.0f, 1.5f, 0.0f };
+		float distance = 4.3f;
+		// float height = 2.5f;
+
+		// camera_pos = transform.pos - (forward * distance) + (up * height);
+		// target_pos = transform.pos + (forward * 2.0f);
+
+		float horizontal{ distance * std::cos(input.cam_pitch) };
+		float vertical{ distance * std::sin(input.cam_pitch) };
+
+		glm::vec3 offset{ //
+			horizontal * std::sin(input.cam_yaw),
+			-vertical,
+			horizontal * std::cos(input.cam_yaw)
+		};
+
+		target_pos = transform.pos;
+		camera_pos = transform.pos + up + offset;
+	}
+
+	glm::mat4 proj = glm::perspective(glm::radians(75.0f), ctx.aspect, 0.1f, 100.0f);
+	glm::mat4 view = glm::lookAt(camera_pos, target_pos, glm::vec3(0.0f, 1.0f, 0.0f));
 	glm::mat4 vp = proj * view;
 
-	auto ecs_view = registry.view<const Transform, const Renderable>();
-	for (auto [entity, transform, renderable] : ecs_view.each()) {
+	auto renderable_view = registry.view<const Transform, const Renderable>();
+	for (auto [entity, transform, renderable] : renderable_view.each()) {
 		glm::mat4 model = glm::translate(glm::mat4(1.0f), transform.pos);
 		model = model * glm::mat4_cast(transform.rot);
+		model = glm::scale(model, transform.scale);
 		glm::mat4 mvp = vp * model;
 
 		ctx.queue.WriteBuffer(renderable.uniformBuffer, 0, &mvp, sizeof(glm::mat4));
