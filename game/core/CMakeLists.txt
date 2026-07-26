@@ -1,3 +1,5 @@
+set(TARGET_NAME core)
+
 include(FetchContent)
 
 FetchContent_Declare(
@@ -28,9 +30,25 @@ FetchContent_Declare(
 )
 FetchContent_MakeAvailable(glaze)
 
-add_library(core STATIC src/factories.cpp)
+add_library(${TARGET_NAME} STATIC
+	src/factories.cpp
+	src/utils/files.cpp
+	src/systems/physics.cpp
+)
 
-target_link_libraries(core PUBLIC glm::glm box3d::box3d EnTT::EnTT glaze::glaze)
+target_link_libraries(${TARGET_NAME} PUBLIC
+	glm::glm
+	box3d::box3d
+	EnTT::EnTT
+	glaze::glaze
+)
 
-target_include_directories(core PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include)
-target_compile_options(core PRIVATE -Wall -Wextra -Werror -pedantic)
+target_include_directories(${TARGET_NAME} PUBLIC
+	${CMAKE_CURRENT_SOURCE_DIR}/include
+	${CMAKE_CURRENT_SOURCE_DIR}/lib
+)
+
+target_compile_options(${TARGET_NAME} PRIVATE
+	-Wall -Wextra -Werror -pedantic
+	-Wno-deprecated-literal-operator -Wno-unused-template
+)
