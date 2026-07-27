@@ -24,8 +24,3 @@ struct MaterialComponent {
 	uint32_t pipelineID{};
 	wgpu::BindGroup bindGroup{};
 };
-
-struct MeshData {
-	std::vector<float> vertices;
-	std::vector<uint16_t> indices;
-};

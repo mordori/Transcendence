@@ -38,6 +38,9 @@ struct RenderContext {
 	wgpu::BindGroup globalBindGroup{};
 	float aspect{ 1.0f };
 
+	wgpu::Texture depthTexture{};
+	wgpu::TextureView depthView{};
+
 	wgpu::RenderPipeline pipeline{};
 	wgpu::BindGroupLayout bindGroupLayout{};
 };

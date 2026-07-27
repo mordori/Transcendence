@@ -1,9 +1,18 @@
 #pragma once
 
+#include <cstdint>
+#include <vector>
+
 #include "box3d/id.h"
 #include "glm/fwd.hpp"
 #include "glm/glm.hpp"
 #include "glm/gtc/quaternion.hpp"
+
+struct PlayerTag {};
+
+struct PlayerComponent {
+	bool is_grounded{};
+};
 
 struct Transform {
 	glm::vec3 pos{};
@@ -17,4 +26,9 @@ struct World {
 
 struct RigidBody {
 	b3BodyId id{};
+};
+
+struct MeshData {
+	std::vector<float> vertices;
+	std::vector<uint16_t> indices;
 };
