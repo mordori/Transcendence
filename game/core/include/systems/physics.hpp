@@ -5,6 +5,6 @@
 
 namespace core::systems {
 
-void setup_physics(entt::registry& registry);
-void update_physics(entt::registry& registry, float dt);
+void setupPhysics(entt::registry& registry);
+void updatePhysics(entt::registry& registry, float dt);
 }

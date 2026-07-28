@@ -5,5 +5,5 @@
 
 namespace client::systems {
 
-void setup_input(entt::registry& registry, entt::entity local_player);
+void setupInput(entt::registry& registry, entt::entity player);
 }

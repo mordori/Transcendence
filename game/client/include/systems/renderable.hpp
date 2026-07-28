@@ -8,7 +8,7 @@
 
 namespace client::systems {
 
-MeshData create_mesh_cube();
-std::optional<MeshData> load_mesh(const std::string& filepath);
-Renderable create_renderable(const MeshData& mesh);
+MeshData createMeshCube();
+std::optional<MeshData> loadMesh(const std::string& filepath);
+Renderable createRenderable(const MeshData& mesh);
 }
