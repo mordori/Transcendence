@@ -12,6 +12,7 @@ endif
 
 NAME	:=transcendence
 PROC	:=-j$(shell nproc 2>/dev/null || sysctl -n hw.ncpu 2>/dev/null || echo 4)
+PKG		:=$(shell command -v pacman >/dev/null 2>&1 && echo pacman || { command -v apt-get >/dev/null 2>&1 && echo apt || echo unknown; })
 
 all: build run
 
@@ -50,13 +51,28 @@ fclean: clean
 re: fclean all
 
 dependencies:
-	sudo apt update && sudo apt upgrade -y
-	sudo apt install cmake curl git -y
+	@if [ "$(PKG)" = "unknown" ]; then \
+		echo -e "$(RED)No supported package manager found (apt or pacman).$(COLOR)"; \
+		exit 1; \
+	fi
+	@echo -e "$(BLUE)Using package manager: $(PKG)$(COLOR)"
+	@if [ "$(PKG)" = "pacman" ]; then \
+		sudo pacman -Syu --noconfirm; \
+		sudo pacman -S --needed --noconfirm cmake curl git; \
+	else \
+		sudo apt update && sudo apt upgrade -y; \
+		sudo apt install cmake curl git -y; \
+	fi
 	@if ! command -v docker >/dev/null 2>&1; then \
 		echo -e "$(YELLOW)Installing Docker...$(COLOR)"; \
-		curl -fsSL https://get.docker.com -o get-docker.sh; \
-		sudo sh get-docker.sh; \
-		rm get-docker.sh; \
+		if [ "$(PKG)" = "pacman" ]; then \
+			sudo pacman -S --needed --noconfirm docker docker-compose docker-buildx; \
+			sudo systemctl enable --now docker.service; \
+		else \
+			curl -fsSL https://get.docker.com -o get-docker.sh; \
+			sudo sh get-docker.sh; \
+			rm get-docker.sh; \
+		fi; \
 		sudo usermod -aG docker $$USER; \
 	else \
 		echo -e "$(GREEN)Docker is already installed.$(COLOR)"; \
