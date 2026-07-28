@@ -24,7 +24,7 @@ build:
 run:
 	@docker compose up -d --build
 	@echo
-	@echo -e "$(GREEN)✔$(COLOR)  Build successful and running: $(YELLOW)http://localhost:8080/$(COLOR)"
+	@echo -e "$(GREEN)✔$(COLOR)  Build successful and running: $(YELLOW)https://localhost/$(COLOR)"
 	@echo
 
 dev: build

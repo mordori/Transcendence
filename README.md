@@ -28,7 +28,7 @@ make dev
 ## Run
 Open in your web browser
 ```
-http://localhost:8080
+http://localhost
 ```
 
 Stop the services
