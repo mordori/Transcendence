@@ -35,7 +35,7 @@ EM_BOOL mouseCallback(int eventType, const EmscriptenMouseEvent* e, void* userDa
 			controller.camYaw -= e->movementX * sensitivity;
 			controller.camPitch -= e->movementY * sensitivity;
 
-			controller.camPitch = std::clamp(controller.camPitch, -1.5f, 1.5f);
+			controller.camPitch = std::clamp(controller.camPitch, -0.8f, 0.4f);
 		}
 	}
 	return EM_TRUE;

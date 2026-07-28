@@ -15,7 +15,7 @@ struct PlayerController {
 	bool isGrounded{};
 	float steeringAngle{};
 	float camYaw{};
-	float camPitch{ -0.15f };
+	float camPitch{ 0.2f };
 };
 
 struct Transform {
