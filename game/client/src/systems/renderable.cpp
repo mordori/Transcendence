@@ -17,25 +17,25 @@
 
 namespace client::systems {
 
-Renderable create_renderable(const MeshData& mesh) {
+Renderable createRenderable(const MeshData& mesh) {
 	Renderable r{};
-	auto& ctx = get_render_context();
+	auto& ctx = getRenderContext();
 
 	wgpu::BufferDescriptor ubo{};
 	ubo.usage = wgpu::BufferUsage::Uniform | wgpu::BufferUsage::CopyDst;
 	ubo.size = sizeof(glm::mat4);
 	r.uniformBuffer = ctx.device.CreateBuffer(&ubo);
 
-	wgpu::BindGroupEntry bg_entry{};
-	bg_entry.binding = 0;
-	bg_entry.buffer = r.uniformBuffer;
-	bg_entry.size = sizeof(glm::mat4);
+	wgpu::BindGroupEntry bgEntry{};
+	bgEntry.binding = 0;
+	bgEntry.buffer = r.uniformBuffer;
+	bgEntry.size = sizeof(glm::mat4);
 
-	wgpu::BindGroupDescriptor bg_desc{};
-	bg_desc.layout = ctx.bindGroupLayout;
-	bg_desc.entryCount = 1;
-	bg_desc.entries = &bg_entry;
-	r.bindGroup = ctx.device.CreateBindGroup(&bg_desc);
+	wgpu::BindGroupDescriptor bgDesc{};
+	bgDesc.layout = ctx.bindGroupLayout;
+	bgDesc.entryCount = 1;
+	bgDesc.entries = &bgEntry;
+	r.bindGroup = ctx.device.CreateBindGroup(&bgDesc);
 
 	r.indexCount = mesh.indices.size();
 
@@ -54,7 +54,7 @@ Renderable create_renderable(const MeshData& mesh) {
 	return r;
 }
 
-MeshData create_mesh_cube() {
+MeshData createMeshCube() {
 	MeshData mesh{};
 
 	// clang-format off
@@ -78,7 +78,7 @@ MeshData create_mesh_cube() {
 	return mesh;
 }
 
-std::optional<MeshData> load_mesh(const std::string& filepath) {
+std::optional<MeshData> loadMesh(const std::string& filepath) {
 	MeshData mesh{};
 	cgltf_options opts{};
 	cgltf_data* data{ nullptr };
@@ -93,24 +93,24 @@ std::optional<MeshData> load_mesh(const std::string& filepath) {
 
 	if (data->meshes_count > 0 && data->meshes[0].primitives_count > 0) {
 		cgltf_primitive* prim{ &data->meshes[0].primitives[0] };
-		cgltf_accessor* acc_pos{ nullptr };
-		cgltf_accessor* acc_normal{ nullptr };
+		cgltf_accessor* accPos{ nullptr };
+		cgltf_accessor* accNormal{ nullptr };
 
 		for (cgltf_size i{}; i < prim->attributes_count; ++i) {
 			if (prim->attributes[i].type == cgltf_attribute_type_position)
-				acc_pos = prim->attributes[i].data;
+				accPos = prim->attributes[i].data;
 			else if (prim->attributes[i].type == cgltf_attribute_type_normal)
-				acc_normal = prim->attributes[i].data;
+				accNormal = prim->attributes[i].data;
 		}
 
-		if (acc_pos) {
-			for (cgltf_size i{}; i < acc_pos->count; ++i) {
+		if (accPos) {
+			for (cgltf_size i{}; i < accPos->count; ++i) {
 				std::array<float, 3> pos = { 0.0f, 0.0f, 0.0f };
 				std::array<float, 3> normal = { 0.0f, 1.0f, 0.0f };
 
-				cgltf_accessor_read_float(acc_pos, i, pos.data(), 3);
-				if (acc_normal)
-					cgltf_accessor_read_float(acc_normal, i, normal.data(), 3);
+				cgltf_accessor_read_float(accPos, i, pos.data(), 3);
+				if (accNormal)
+					cgltf_accessor_read_float(accNormal, i, normal.data(), 3);
 
 				mesh.vertices.push_back(pos[0]);
 				mesh.vertices.push_back(pos[1]);

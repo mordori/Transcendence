@@ -6,7 +6,7 @@
 
 namespace core::utils {
 
-std::optional<std::string> load_file(const std::string& filepath) {
+std::optional<std::string> loadFile(const std::string& filepath) {
 	std::ifstream file{ filepath };
 	if (!file.is_open()) {
 		std::cerr << "[File] Could not open file: " << filepath << '\n';

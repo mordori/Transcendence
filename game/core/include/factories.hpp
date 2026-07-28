@@ -6,8 +6,8 @@
 
 namespace core::factories {
 
-void spawn_ground(b3WorldId world_id);
-entt::entity spawn_stadium(entt::registry& registry, b3WorldId world_id, const MeshData& meshData);
-entt::entity spawn_player(entt::registry& registry, b3WorldId world_id);
-entt::entity spawn_ball(entt::registry& registry, b3WorldId world_id);
+void spawnGround(b3WorldId worldId);
+entt::entity spawnStadium(entt::registry& registry, b3WorldId worldId, const MeshData& meshData);
+entt::entity spawnPlayer(entt::registry& registry, b3WorldId worldId);
+entt::entity spawnBall(entt::registry& registry, b3WorldId worldId);
 }

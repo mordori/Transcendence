@@ -45,7 +45,7 @@ struct RenderContext {
 	wgpu::BindGroupLayout bindGroupLayout{};
 };
 
-RenderContext& get_render_context();
-void init_webgpu(std::function<void(bool success)> init_status);
+RenderContext& getRenderContext();
+void initWebGPU(std::function<void(bool success)> initStatus);
 void render(entt::registry& registry);
 }

@@ -10,8 +10,12 @@
 
 struct PlayerTag {};
 
-struct PlayerComponent {
-	bool is_grounded{};
+struct PlayerController {
+	glm::vec3 up{ 0.0f, 1.0f, 0.0f };
+	bool isGrounded{};
+	float steeringAngle{};
+	float camYaw{};
+	float camPitch{ -0.15f };
 };
 
 struct Transform {

@@ -1,13 +1,9 @@
 # Transcendence
 
 ## Pre-requisites
-Make
-``` bash
-sudo apt update && sudo apt upgrade -y
-sudo apt install make -y
-```
+Assumes sudo and Make are installed
 
-CMake, curl, Docker, Emscripten
+Installs CMake, curl, Docker, and Emscripten
 ``` bash
 make dependencies
 ```
@@ -17,14 +13,14 @@ make dependencies
 >
 > For now it's just a first playable with local player
 
-Light-weight static build content and proper services with Docker Compose
+Light-weight static content build and proper services using Docker Compose
 ``` bash
 make
 ```
 
 or
 
-Development oriented hot-reloading build with Vite
+Development oriented hot-reloading build using Vite
 ``` bash
 make dev
 ```

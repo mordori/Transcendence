@@ -42,11 +42,11 @@ struct GameState {
 	bool is_running{ true };
 };
 
-void main_loop(void* arg) {
+void mainLoop(void* arg) {
 	auto* state{ static_cast<GameState*>(arg) };
 	float dt{ 1.0f / 60.0f };
 
-	core::systems::update_physics(state->registry, dt);
+	core::systems::updatePhysics(state->registry, dt);
 	client::systems::render(state->registry);
 }
 
@@ -59,37 +59,37 @@ int main() {
 	std::cout << "--- Standalone Player Starting ---\n";
 	auto* state{ new GameState() };
 
-	core::systems::setup_physics(state->registry);
-	auto world_id{ state->registry.ctx().get<World>().id };
+	core::systems::setupPhysics(state->registry);
+	auto worldId{ state->registry.ctx().get<World>().id };
 
-	core::factories::spawn_ground(world_id);
+	core::factories::spawnGround(worldId);
 
-	auto local_player{ core::factories::spawn_player(state->registry, world_id) };
-	state->registry.emplace<PlayerTag>(local_player);
+	auto player{ core::factories::spawnPlayer(state->registry, worldId) };
+	state->registry.emplace<PlayerTag>(player);
 
-	client::systems::setup_input(state->registry, local_player);
+	client::systems::setupInput(state->registry, player);
 
-	client::systems::init_webgpu([state, local_player, world_id](bool success) {
+	client::systems::initWebGPU([state, player, worldId](bool success) {
 		if (!success) {
 			emscripten_force_exit(1);
 			return;
 		}
 
-		auto mesh_player = client::systems::load_mesh("/models/ball.glb");
-		auto renderable_player = client::systems::create_renderable(mesh_player.value());
-		state->registry.emplace<Renderable>(local_player, std::move(renderable_player));
+		auto meshPlayer = client::systems::loadMesh("/models/car.glb");
+		auto renderablePlayer = client::systems::createRenderable(meshPlayer.value());
+		state->registry.emplace<Renderable>(player, std::move(renderablePlayer));
 
-		auto mesh_stadium = client::systems::load_mesh("/models/cylinder.glb");
-		auto stadium = core::factories::spawn_stadium(state->registry, world_id, mesh_stadium.value());
-		auto renderable_stadium = client::systems::create_renderable(mesh_stadium.value());
-		state->registry.emplace<Renderable>(stadium, std::move(renderable_stadium));
+		auto meshStadium = client::systems::loadMesh("/models/cylinder.glb");
+		auto stadium = core::factories::spawnStadium(state->registry, worldId, meshStadium.value());
+		auto renderableStadium = client::systems::createRenderable(meshStadium.value());
+		state->registry.emplace<Renderable>(stadium, std::move(renderableStadium));
 
-		// auto mesh_ball = client::systems::load_mesh("/models/ball.glb");
-		auto ball = core::factories::spawn_ball(state->registry, world_id);
-		auto renderable_ball = client::systems::create_renderable(mesh_player.value());
-		state->registry.emplace<Renderable>(ball, std::move(renderable_ball));
+		auto meshBall = client::systems::loadMesh("/models/ball.glb");
+		auto ball = core::factories::spawnBall(state->registry, worldId);
+		auto renderableBall = client::systems::createRenderable(meshBall.value());
+		state->registry.emplace<Renderable>(ball, std::move(renderableBall));
 
-		emscripten_set_main_loop_arg(main_loop, state, 0, false);
+		emscripten_set_main_loop_arg(mainLoop, state, 0, false);
 	});
 	emscripten_exit_with_live_runtime();
 
