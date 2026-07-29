@@ -1,4 +1,4 @@
-#include "systems/physics.hpp"
+#include "physics.hpp"
 
 #include <algorithm>
 #include <cmath>
@@ -20,17 +20,16 @@
 #include "glm/geometric.hpp"
 #include "glm/glm.hpp"
 #include "glm/gtc/quaternion.hpp"
-#include "systems/physics.hpp"
 
-namespace core::systems {
+namespace core::physics {
 
-void setupPhysics(entt::registry& registry) {
+void setup(entt::registry& registry) {
 	b3WorldDef def{ b3DefaultWorldDef() };
 	b3WorldId id{ b3CreateWorld(&def) };
 	registry.ctx().emplace<World>(id);
 }
 
-void updatePhysics(entt::registry& registry, float dt) {
+void update(entt::registry& registry, float deltaTime) {
 	auto worldId{ registry.ctx().get<World>().id };
 	auto inputView = registry.view<InputComponent, PlayerController, RigidBody, Transform>();
 	for (auto [entity, input, player, rb, transform] : inputView.each()) {
@@ -53,7 +52,7 @@ void updatePhysics(entt::registry& registry, float dt) {
 			player.steeringAngle = -turn * turnSpeed;
 			player.steeringAngle = std::clamp(player.steeringAngle, -maxTurn, maxTurn);
 		} else {
-			player.steeringAngle = glm::mix(player.steeringAngle, 0.0f, 10.0f * dt);
+			player.steeringAngle = glm::mix(player.steeringAngle, 0.0f, 10.0f * deltaTime);
 		}
 
 		glm::vec3 globalUp{ 0.0f, 1.0f, 0.0f };
@@ -124,8 +123,8 @@ void updatePhysics(entt::registry& registry, float dt) {
 		if (player.isGrounded && glm::dot(player.up, targetNormal) < 0.0f)
 			alignSpeed = 5.0f;
 
-		player.up = glm::normalize(glm::mix(player.up, targetNormal, alignSpeed * dt));
-		float yawDelta{ player.steeringAngle * 2.5f * dt };
+		player.up = glm::normalize(glm::mix(player.up, targetNormal, alignSpeed * deltaTime));
+		float yawDelta{ player.steeringAngle * 2.5f * deltaTime };
 
 		glm::quat steerRot{ glm::angleAxis(yawDelta, player.up) };
 		glm::vec3 steerForward{ steerRot * currentForward };
@@ -159,7 +158,7 @@ void updatePhysics(entt::registry& registry, float dt) {
 			b3Body_ApplyForceToCenter(rb.id, force, true);
 	}
 
-	b3World_Step(worldId, dt, 4);
+	b3World_Step(worldId, deltaTime, 4);
 
 	auto transformView = registry.view<Transform, RigidBody>();
 	for (auto entity : transformView) {

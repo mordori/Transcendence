@@ -9,7 +9,7 @@
 #include "glm/ext/matrix_float4x4.hpp"
 #include "webgpu/webgpu_cpp.h"
 
-namespace client::systems {
+namespace client::renderer {
 
 struct alignas(16) InstanceData {
 	glm::mat4 model;

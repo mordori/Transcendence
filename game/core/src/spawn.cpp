@@ -1,4 +1,4 @@
-#include "factories.hpp"
+#include "spawn.hpp"
 
 #include <cstddef>
 #include <cstdint>
@@ -14,12 +14,12 @@
 #include "entt/entity/fwd.hpp"
 #include "entt/entt.hpp"
 
-namespace core::factories {
+namespace core::spawn {
 
-void spawnGround(b3WorldId world_id) {
+void ground(b3WorldId worldId) {
 	b3BodyDef bodyDef{ b3DefaultBodyDef() };
 	bodyDef.position = { .x = 0.0f, .y = -2.0f, .z = 0.0f };
-	b3BodyId bodyId{ b3CreateBody(world_id, &bodyDef) };
+	b3BodyId bodyId{ b3CreateBody(worldId, &bodyDef) };
 	b3ShapeDef shapeDef{ b3DefaultShapeDef() };
 	shapeDef.baseMaterial.friction = 0.1f;
 
@@ -27,13 +27,13 @@ void spawnGround(b3WorldId world_id) {
 	b3CreateHullShape(bodyId, &shapeDef, &boxHull.base);
 }
 
-entt::entity spawnStadium(entt::registry& registry, b3WorldId world_id, const MeshData& meshData) {
+entt::entity stadium(entt::registry& registry, b3WorldId worldId, const MeshData& meshData) {
 	auto stadium = registry.create();
 
 	b3BodyDef bodyDef{ b3DefaultBodyDef() };
 	bodyDef.position = b3Vec3_zero;
 	bodyDef.type = b3_staticBody;
-	b3BodyId bodyId{ b3CreateBody(world_id, &bodyDef) };
+	b3BodyId bodyId{ b3CreateBody(worldId, &bodyDef) };
 
 	b3ShapeDef shapeDef{ b3DefaultShapeDef() };
 	shapeDef.baseMaterial.friction = 0.1f;
@@ -71,7 +71,7 @@ entt::entity spawnStadium(entt::registry& registry, b3WorldId world_id, const Me
 	return stadium;
 }
 
-entt::entity spawnBall(entt::registry& registry, b3WorldId world_id) {
+entt::entity ball(entt::registry& registry, b3WorldId worldId) {
 	auto ball{ registry.create() };
 	registry.emplace<InputComponent>(ball);
 
@@ -85,7 +85,7 @@ entt::entity spawnBall(entt::registry& registry, b3WorldId world_id) {
 	bodyDef.linearDamping = 0.1f;
 	bodyDef.position = { .x = t.pos.x, .y = t.pos.y, .z = t.pos.z };
 
-	b3BodyId bodyId{ b3CreateBody(world_id, &bodyDef) };
+	b3BodyId bodyId{ b3CreateBody(worldId, &bodyDef) };
 	b3ShapeDef shapeDef{ b3DefaultShapeDef() };
 	shapeDef.density = 0.0001f;
 	shapeDef.baseMaterial.friction = 0.1f;
@@ -98,7 +98,7 @@ entt::entity spawnBall(entt::registry& registry, b3WorldId world_id) {
 	return ball;
 }
 
-entt::entity spawnPlayer(entt::registry& registry, b3WorldId world_id) {
+entt::entity player(entt::registry& registry, b3WorldId worldId) {
 	auto player{ registry.create() };
 	registry.emplace<InputComponent>(player);
 	registry.emplace<PlayerController>(player);
@@ -113,7 +113,7 @@ entt::entity spawnPlayer(entt::registry& registry, b3WorldId world_id) {
 	bodyDef.linearDamping = 0.6f;
 	bodyDef.position = { .x = t.pos.x, .y = t.pos.y, .z = t.pos.z };
 
-	b3BodyId bodyId{ b3CreateBody(world_id, &bodyDef) };
+	b3BodyId bodyId{ b3CreateBody(worldId, &bodyDef) };
 	b3ShapeDef shapeDef{ b3DefaultShapeDef() };
 	shapeDef.density = 10.0f;
 	shapeDef.baseMaterial.friction = 0.8f;

@@ -9,6 +9,7 @@
 #include "glm/gtc/quaternion.hpp"
 
 struct PlayerTag {};
+struct BallTag {};
 
 struct PlayerController {
 	glm::vec3 up{ 0.0f, 1.0f, 0.0f };

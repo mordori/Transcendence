@@ -1,4 +1,4 @@
-#include "systems/input.hpp"
+#include "input.hpp"
 
 #include <algorithm>
 #include <cstring>
@@ -13,15 +13,11 @@
 #include "emscripten/html5.h"
 #endif
 
-namespace client::systems {
-
-struct LocalPlayerCtx {
-	entt::entity id;
-};
+namespace {
 
 EM_BOOL mouseCallback(int eventType, const EmscriptenMouseEvent* e, void* userData) {
 	auto* registry{ static_cast<entt::registry*>(userData) };
-	auto player{ registry->ctx().get<LocalPlayerCtx>().id };
+	auto player{ registry->ctx().get<client::input::LocalPlayerCtx>().id };
 	auto& controller{ registry->get<PlayerController>(player) };
 
 	if (eventType == EMSCRIPTEN_EVENT_MOUSEDOWN)
@@ -43,7 +39,7 @@ EM_BOOL mouseCallback(int eventType, const EmscriptenMouseEvent* e, void* userDa
 
 EM_BOOL keyCallback(int eventType, const EmscriptenKeyboardEvent* e, void* userData) {
 	auto* registry{ static_cast<entt::registry*>(userData) };
-	auto player{ registry->ctx().get<LocalPlayerCtx>().id };
+	auto player{ registry->ctx().get<client::input::LocalPlayerCtx>().id };
 	auto& input{ registry->get<InputComponent>(player) };
 
 	bool isDown{ (eventType == EMSCRIPTEN_EVENT_KEYDOWN) };
@@ -79,8 +75,11 @@ EM_BOOL keyCallback(int eventType, const EmscriptenKeyboardEvent* e, void* userD
 
 	return handled ? EM_TRUE : EM_FALSE;
 }
+}
 
-void setupInput(entt::registry& registry, entt::entity player) {
+namespace client::input {
+
+void setup(entt::registry& registry, entt::entity player) {
 	registry.ctx().emplace<LocalPlayerCtx>(player);
 
 #ifdef __EMSCRIPTEN__
@@ -91,5 +90,4 @@ void setupInput(entt::registry& registry, entt::entity player) {
 	emscripten_set_mousemove_callback(EMSCRIPTEN_EVENT_TARGET_WINDOW, &registry, true, mouseCallback);
 #endif
 }
-
 }

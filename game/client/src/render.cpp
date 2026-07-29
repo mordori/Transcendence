@@ -1,4 +1,4 @@
-#include "systems/render.hpp"
+#include "render.hpp"
 
 #include <sys/types.h>
 
@@ -11,7 +11,6 @@
 #include <string>
 #include <utility>
 
-#include "components/input.hpp"
 #include "components/physics.hpp"
 #include "components/renderable.hpp"
 #include "entt/entity/fwd.hpp"
@@ -29,7 +28,7 @@
 #include "emscripten/html5.h"
 #endif
 
-namespace client::systems {
+namespace client::renderer {
 
 bool CreateRenderPipeline();
 
