@@ -7,6 +7,10 @@
 #include "glm/fwd.hpp"
 #include "glm/gtc/quaternion.hpp"
 
+struct NetworkId {
+	uint32_t id{};
+};
+
 struct EntityState {
 	uint32_t id{};
 	glm::vec3 pos{};

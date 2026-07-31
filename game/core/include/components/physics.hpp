@@ -4,6 +4,8 @@
 #include <vector>
 
 #include "box3d/id.h"
+#include "entt/entity/entity.hpp"
+#include "entt/entity/fwd.hpp"
 #include "glm/fwd.hpp"
 #include "glm/glm.hpp"
 #include "glm/gtc/quaternion.hpp"
@@ -17,12 +19,16 @@ struct PlayerController {
 	float steeringAngle{};
 	float camYaw{};
 	float camPitch{ 0.2f };
+	entt::entity frontLeftWheel{ entt::null };
+	entt::entity frontRightWheel{ entt::null };
 };
 
 struct Transform {
 	glm::vec3 pos{};
 	glm::quat rot{ 1.0f, 0.0f, 0.0f, 0.0f };
 	glm::vec3 scale{ 1.0f };
+	glm::vec3 prevPos{};
+	glm::quat prevRot{ 1.0f, 0.0f, 0.0f, 0.0f };
 };
 
 struct World {

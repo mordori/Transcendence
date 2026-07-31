@@ -6,5 +6,5 @@
 namespace core::physics {
 
 void setup(entt::registry& registry);
-void update(entt::registry& registry, float deltaTime);
+void update(entt::registry& registry, float fixedTimeStep);
 }

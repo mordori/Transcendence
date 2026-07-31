@@ -2,6 +2,7 @@
 
 #include <algorithm>
 #include <cmath>
+#include <cstdlib>
 
 #include "box3d/box3d.h"
 #include "box3d/id.h"
@@ -9,6 +10,7 @@
 #include "box3d/types.h"
 #include "components/input.hpp"
 #include "components/physics.hpp"
+#include "entt/entity/entity.hpp"
 #include "entt/entity/fwd.hpp"
 #include "glm/common.hpp"
 #include "glm/ext/matrix_float3x3.hpp"
@@ -20,17 +22,10 @@
 #include "glm/geometric.hpp"
 #include "glm/glm.hpp"
 #include "glm/gtc/quaternion.hpp"
+#include "glm/trigonometric.hpp"
 
-namespace core::physics {
-
-void setup(entt::registry& registry) {
-	b3WorldDef def{ b3DefaultWorldDef() };
-	b3WorldId id{ b3CreateWorld(&def) };
-	registry.ctx().emplace<World>(id);
-}
-
-void update(entt::registry& registry, float deltaTime) {
-	auto worldId{ registry.ctx().get<World>().id };
+namespace {
+void updatePlayerControllers(entt::registry& registry, float fixedTimeStep, b3WorldId worldId) {
 	auto inputView = registry.view<InputComponent, PlayerController, RigidBody, Transform>();
 	for (auto [entity, input, player, rb, transform] : inputView.each()) {
 		float move = 0.0f;
@@ -45,48 +40,44 @@ void update(entt::registry& registry, float deltaTime) {
 		if (input.right)
 			turn += 1.0f;
 
-		float turnSpeed{ 0.5f };
-		float maxTurn{ 0.5f };
-
-		if (turn != 0.0f) {
-			player.steeringAngle = -turn * turnSpeed;
-			player.steeringAngle = std::clamp(player.steeringAngle, -maxTurn, maxTurn);
-		} else {
-			player.steeringAngle = glm::mix(player.steeringAngle, 0.0f, 10.0f * deltaTime);
-		}
-
+		move = std::max(move, -0.6f);
 		glm::vec3 globalUp{ 0.0f, 1.0f, 0.0f };
 		b3Vec3 bodyPos{ b3Body_GetPosition(rb.id) };
 		glm::vec3 down{ -player.up };
+		float mass{ b3Body_GetMass(rb.id) };
+		b3Vec3 b3velocity{ b3Body_GetLinearVelocity(rb.id) };
+		glm::vec3 velocity{ glm::vec3{ b3velocity.x, b3velocity.y, b3velocity.z } };
+		glm::vec3 currentForward{ transform.rot * glm::vec3{ 0.0f, 0.0f, -1.0f } };
 
-		b3Vec3 rayOrigin = { //
-			.x = bodyPos.x + (down.x * 0.51f),
-			.y = bodyPos.y + (down.y * 0.51f),
-			.z = bodyPos.z + (down.z * 0.51f)
-		};
-		b3Vec3 rayTranslation = { //
-			.x = down.x * 0.6f,
-			.y = down.y * 0.6f,
-			.z = down.z * 0.6f
-		};
+		float forwardSpeed{ glm::dot(velocity, currentForward) };
+		float absSpeed{ std::abs(forwardSpeed) };
+		float speedFactor{ std::clamp(absSpeed / 40.0f, 0.0f, 1.0f) };
+
+		float maxTurn{ glm::mix(0.7f, 0.25f, speedFactor) };
+		float targetSteering{ -turn * maxTurn };
+		float steerSpeed{ (turn != 0.0f) ? 5.0f : 8.0f };
+		player.steeringAngle = glm::mix(player.steeringAngle, targetSteering, steerSpeed * fixedTimeStep);
+
+		b3Vec3 rayOrigin = { .x = bodyPos.x, .y = bodyPos.y, .z = bodyPos.z };
+		b3Vec3 rayTranslation = { .x = down.x * 0.75f, .y = down.y * 0.75f, .z = down.z * 0.75f };
 		b3QueryFilter filter = { b3DefaultQueryFilter() };
 		b3RayResult hit = { b3World_CastRayClosest(worldId, rayOrigin, rayTranslation, filter) };
-		bool contact{ hit.hit };
 
-		if (!contact) {
+		if (!hit.hit) {
 			b3Vec3 globalOrigin = { .x = bodyPos.x, .y = bodyPos.y, .z = bodyPos.z };
-			b3Vec3 globalTranslation{ .x = 0.0f, .y = -2.0f, .z = 0.0f };
+			b3Vec3 globalTranslation{ .x = 0.0f, .y = -0.7f, .z = 0.0f };
 			hit = { b3World_CastRayClosest(worldId, globalOrigin, globalTranslation, filter) };
 		}
 
-		player.isGrounded = contact || hit.hit;
-		glm::vec3 currentForward{ transform.rot * glm::vec3{ 0.0f, 0.0f, -1.0f } };
+		player.isGrounded = hit.hit;
 		glm::vec3 targetNormal = globalUp;
 
 		if (player.isGrounded) {
 			glm::vec3 surfaceNormal = glm::normalize(glm::vec3{ hit.normal.x, hit.normal.y, hit.normal.z });
 			float dotSurface = glm::dot(player.up, surfaceNormal);
 			if (dotSurface < 0.0f) {
+				if (dotSurface < 0.9f)
+					player.steeringAngle = 0.0f;
 				glm::vec3 rollNormal = surfaceNormal - (currentForward * glm::dot(surfaceNormal, currentForward));
 				if (glm::length(rollNormal) > 0.001f)
 					rollNormal = glm::normalize(rollNormal);
@@ -104,27 +95,45 @@ void update(entt::registry& registry, float deltaTime) {
 			}
 
 			if (input.jump && dotSurface >= -0.25f) {
-				b3Vec3 jumpForce{ //
-					.x = player.up.x * 3000.0f,
-					.y = player.up.y * 3000.0f,
-					.z = player.up.z * 3000.0f
+				float jumpSpeed{ 20.0f * mass };
+				b3Vec3 jumpImpulse{ //
+					.x = player.up.x * jumpSpeed,
+					.y = player.up.y * jumpSpeed,
+					.z = player.up.z * jumpSpeed
 				};
-				b3Body_ApplyForceToCenter(rb.id, jumpForce, true);
+				b3Body_ApplyLinearImpulseToCenter(rb.id, jumpImpulse, true);
 				input.jump = false;
 			}
 		} else {
-			if (glm::dot(player.up, globalUp) < 0.0f)
-				targetNormal = -globalUp;
-			else
-				targetNormal = globalUp;
+			targetNormal = (glm::dot(player.up, globalUp) < 0.0f) ? -globalUp : globalUp;
+			if (velocity.y < -0.2f) {
+				float extraGravity{ 15.0f * mass };
+				b3Vec3 fallForce{ //
+					.x = 0.0f,
+					.y = -extraGravity,
+					.z = 0.0f
+				};
+				b3Body_ApplyForceToCenter(rb.id, fallForce, true);
+			}
 		}
 
-		float alignSpeed{ (contact || player.isGrounded) ? 2.5f : 0.5f };
-		if (player.isGrounded && glm::dot(player.up, targetNormal) < 0.0f)
-			alignSpeed = 5.0f;
+		float alignSpeed{ player.isGrounded ? 3.5f : 1.5f };
+		if (player.isGrounded && glm::dot(player.up, targetNormal) < 0.5f) {
+			alignSpeed = 7.0f;
+		}
 
-		player.up = glm::normalize(glm::mix(player.up, targetNormal, alignSpeed * deltaTime));
-		float yawDelta{ player.steeringAngle * 2.5f * deltaTime };
+		player.up = glm::normalize(glm::mix(player.up, targetNormal, alignSpeed * fixedTimeStep));
+
+		float yawDelta{};
+		if (player.isGrounded) {
+			float turnSensitivity{ 2.3f };
+			float rotationSpeed{ std::clamp(forwardSpeed, -12.0f, 20.0f) };
+			yawDelta = (rotationSpeed / turnSensitivity) * std::sin(player.steeringAngle) * fixedTimeStep;
+		} else {
+			float airSpinSpeed{ 3.0f };
+			float dir{ (move < 0.0f) ? -1.0f : 1.0f };
+			yawDelta = -turn * dir * airSpinSpeed * fixedTimeStep;
+		}
 
 		glm::quat steerRot{ glm::angleAxis(yawDelta, player.up) };
 		glm::vec3 steerForward{ steerRot * currentForward };
@@ -138,28 +147,84 @@ void update(entt::registry& registry, float deltaTime) {
 		glm::vec3 trueForward{ glm::normalize(glm::cross(player.up, right)) };
 		glm::mat3 matRot{ right, player.up, -trueForward };
 		transform.rot = glm::quat_cast(matRot);
-		b3Vec3 forward{ //
+		b3Vec3 b3forward{ //
 			.x = trueForward.x,
 			.y = trueForward.y,
 			.z = trueForward.z
 		};
 
-		move = std::max(move, -0.6f);
-		float moveSpeed = (contact || player.isGrounded) ? 40.0f : 15.0f;
-		if (glm::dot(player.up, targetNormal) < 0.0f && player.isGrounded)
-			moveSpeed = 0.0f;
-		b3Vec3 force{ //
-			.x = forward.x * move * moveSpeed,
-			.y = forward.y * move * moveSpeed,
-			.z = forward.z * move * moveSpeed
+		float moveSpeed{};
+		moveSpeed = (glm::dot(player.up, targetNormal) < 0.9f) ? 4.0f : 35.0f;
+		if (!player.isGrounded)
+			moveSpeed = std::min(moveSpeed, 15.0f);
+		if (move < 0.0f)
+			moveSpeed *= 0.8f;
+		moveSpeed = move * moveSpeed * mass;
+		b3Vec3 moveForce{ //
+			.x = b3forward.x * moveSpeed,
+			.y = b3forward.y * moveSpeed,
+			.z = b3forward.z * moveSpeed
 		};
 
-		if (force.x != 0.0f || force.y != 0.0f || force.z != 0.0f)
-			b3Body_ApplyForceToCenter(rb.id, force, true);
+		if (moveForce.x != 0.0f || moveForce.y != 0.0f || moveForce.z != 0.0f)
+			b3Body_ApplyForceToCenter(rb.id, moveForce, true);
+
+		glm::vec3 forward{ b3forward.x, b3forward.y, b3forward.z };
+
+		if (player.isGrounded) {
+			float rightSpeed{ glm::dot(velocity, right) };
+
+			float grip{ rightSpeed * 0.9f * mass };
+
+			b3Vec3 lateralImpulse{ //
+				.x = -right.x * grip,
+				.y = -right.y * grip,
+				.z = -right.z * grip
+			};
+			b3Body_ApplyLinearImpulseToCenter(rb.id, lateralImpulse, true);
+
+			float dir{ (forwardSpeed >= 0.0f) ? 1.0f : -1.0f };
+			float drag{ std::abs(rightSpeed) * 0.3f * mass * dir };
+			b3Vec3 scrubImpulse{ //
+				.x = -forward.x * drag,
+				.y = -forward.y * drag,
+				.z = -forward.z * drag
+			};
+			b3Body_ApplyLinearImpulseToCenter(rb.id, scrubImpulse, true);
+
+			if (glm::dot(player.up, globalUp) > 0.0f) {
+				float downPull{ std::abs(forwardSpeed * 1.5f * mass) };
+				b3Vec3 downForce{ //
+					.x = down.x * downPull,
+					.y = down.y * downPull,
+					.z = down.z * downPull
+				};
+				b3Body_ApplyForceToCenter(rb.id, downForce, true);
+			}
+		}
 	}
+}
 
-	b3World_Step(worldId, deltaTime, 4);
+void updateBall(entt::registry& registry) {
+	auto inputView = registry.view<BallTag, RigidBody, Transform>();
+	for (auto [entity, rb, transform] : inputView.each()) {
+		float mass{ b3Body_GetMass(rb.id) };
+		b3Vec3 b3velocity{ b3Body_GetLinearVelocity(rb.id) };
+		glm::vec3 velocity{ glm::vec3{ b3velocity.x, b3velocity.y, b3velocity.z } };
 
+		if (velocity.y < -0.1f) {
+			float extraGravity{ 5.0f * mass };
+			b3Vec3 fallForce{ //
+				.x = 0.0f,
+				.y = -extraGravity,
+				.z = 0.0f
+			};
+			b3Body_ApplyForceToCenter(rb.id, fallForce, true);
+		}
+	}
+}
+
+void updateTransforms(entt::registry& registry) {
 	auto transformView = registry.view<Transform, RigidBody>();
 	for (auto entity : transformView) {
 		auto& transform = transformView.get<Transform>(entity);
@@ -170,8 +235,58 @@ void update(entt::registry& registry, float deltaTime) {
 
 		if (!registry.all_of<PlayerTag>(entity)) {
 			b3Quat rot = b3Body_GetRotation(rb.id);
-			transform.rot = { rot.s, rot.v.x, rot.v.y, rot.v.z };
+			transform.rot = glm::quat{ rot.s, rot.v.x, rot.v.y, rot.v.z };
+		} else {
+			auto& controller{ registry.get<PlayerController>(entity) };
+
+			glm::vec3 leftOffset{ -0.37315f, -0.310476f, -0.456852f };
+			glm::vec3 rightOffset{ 0.37315f, -0.310476f, -0.456852f };
+
+			glm::quat wheelTurn = glm::angleAxis(controller.steeringAngle, glm::vec3(0.0f, 1.0f, 0.0f));
+			glm::quat finalWheelRot = transform.rot * wheelTurn;
+
+			if (controller.frontLeftWheel != entt::null) {
+				auto& wheelT = registry.get<Transform>(controller.frontLeftWheel);
+				wheelT.pos = transform.pos + (transform.rot * leftOffset);
+				wheelT.rot = finalWheelRot;
+			}
+
+			if (controller.frontRightWheel != entt::null) {
+				auto& wheelT = registry.get<Transform>(controller.frontRightWheel);
+				wheelT.pos = transform.pos + (transform.rot * rightOffset);
+				glm::quat rot180 = glm::angleAxis(glm::radians(180.0f), glm::vec3(0.0f, 1.0f, 0.0f));
+				wheelT.rot = finalWheelRot * rot180;
+			}
 		}
 	}
+}
+
+void setPreviousTransforms(entt::registry& registry) {
+	auto allTransforms = registry.view<Transform>();
+	for (auto entity : allTransforms) {
+		auto& t = allTransforms.get<Transform>(entity);
+		t.prevPos = t.pos;
+		t.prevRot = t.rot;
+	}
+}
+}
+
+namespace core::physics {
+
+void setup(entt::registry& registry) {
+	b3WorldDef def{ b3DefaultWorldDef() };
+	def.gravity = { .x = 0.0f, .y = -25.0f, .z = 0.0f };
+	b3WorldId id{ b3CreateWorld(&def) };
+	registry.ctx().emplace<World>(id);
+}
+
+void update(entt::registry& registry, float fixedTimeStep) {
+	auto worldId{ registry.ctx().get<World>().id };
+
+	setPreviousTransforms(registry);
+	updatePlayerControllers(registry, fixedTimeStep, worldId);
+	updateBall(registry);
+	b3World_Step(worldId, fixedTimeStep, 4);
+	updateTransforms(registry);
 }
 }

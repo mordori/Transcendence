@@ -47,5 +47,5 @@ struct RenderContext {
 
 RenderContext& getRenderContext();
 void initWebGPU(std::function<void(bool success)> initStatus);
-void render(entt::registry& registry);
+void render(entt::registry& registry, float deltaTime, float alpha);
 }

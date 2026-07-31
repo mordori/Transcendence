@@ -18,18 +18,18 @@ std::string buildSnapshot(entt::registry& registry, uint32_t currentTick) {
 	Snapshot snapshot{};
 	snapshot.tick = currentTick;
 
-	auto playerView = registry.view<PlayerTag, Transform>();
-	for (auto [entity, transform] : playerView.each()) {
+	auto playerView = registry.view<PlayerTag, NetworkId, Transform>();
+	for (auto [entity, netId, transform] : playerView.each()) {
 		snapshot.players.push_back({ //
-			.id = static_cast<uint32_t>(entity),
+			.id = netId.id,
 			.pos = transform.pos,
 			.rot = transform.rot });
 	}
 
-	auto ballView = registry.view<BallTag, Transform>();
-	for (auto [entity, transform] : ballView.each()) {
+	auto ballView = registry.view<BallTag, NetworkId, Transform>();
+	for (auto [entity, netId, transform] : ballView.each()) {
 		snapshot.balls.push_back({ //
-			.id = static_cast<uint32_t>(entity),
+			.id = netId.id,
 			.pos = transform.pos,
 			.rot = transform.rot });
 	}

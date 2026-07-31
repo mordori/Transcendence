@@ -13,6 +13,7 @@
 #include "components/physics.hpp"
 #include "entt/entity/fwd.hpp"
 #include "entt/entt.hpp"
+#include "glm/ext/vector_float3.hpp"
 
 namespace core::spawn {
 
@@ -73,23 +74,24 @@ entt::entity stadium(entt::registry& registry, b3WorldId worldId, const MeshData
 
 entt::entity ball(entt::registry& registry, b3WorldId worldId) {
 	auto ball{ registry.create() };
-	registry.emplace<InputComponent>(ball);
+	registry.emplace<BallTag>(ball);
 
 	Transform t{ .pos = { 0.0f, 1.0f, 0.0f }, .scale = { 4.0f, 4.0f, 4.0f } };
+	t.prevPos = t.pos;
 	registry.emplace<Transform>(ball, t);
 
 	b3BodyDef bodyDef{ b3DefaultBodyDef() };
 	bodyDef.type = b3_dynamicBody;
 	bodyDef.gravityScale = 0.25f;
-	bodyDef.angularDamping = 0.2f;
-	bodyDef.linearDamping = 0.1f;
+	bodyDef.angularDamping = 0.5f;
+	bodyDef.linearDamping = 0.3f;
 	bodyDef.position = { .x = t.pos.x, .y = t.pos.y, .z = t.pos.z };
 
 	b3BodyId bodyId{ b3CreateBody(worldId, &bodyDef) };
 	b3ShapeDef shapeDef{ b3DefaultShapeDef() };
 	shapeDef.density = 0.0001f;
 	shapeDef.baseMaterial.friction = 0.1f;
-	shapeDef.baseMaterial.restitution = 0.75f;
+	shapeDef.baseMaterial.restitution = 0.5f;
 
 	b3Sphere sphere{ .center = b3Vec3_zero, .radius = 2.0f };
 	b3CreateSphereShape(bodyId, &shapeDef, &sphere);
@@ -101,23 +103,34 @@ entt::entity ball(entt::registry& registry, b3WorldId worldId) {
 entt::entity player(entt::registry& registry, b3WorldId worldId) {
 	auto player{ registry.create() };
 	registry.emplace<InputComponent>(player);
-	registry.emplace<PlayerController>(player);
+	auto& controller{ registry.emplace<PlayerController>(player) };
 
 	Transform t{ .pos = { 0.0f, 1.0f, 10.0f } };
+	t.prevPos = t.pos;
 	registry.emplace<Transform>(player, t);
 
+	controller.frontRightWheel = registry.create();
+	Transform tFR{};
+	registry.emplace<Transform>(controller.frontRightWheel, tFR);
+
+	controller.frontLeftWheel = registry.create();
+	Transform tFL{};
+	// tFL.scale.x *= -1.0f;
+	registry.emplace<Transform>(controller.frontLeftWheel, tFL);
+
 	b3BodyDef bodyDef{ b3DefaultBodyDef() };
-	bodyDef.gravityScale = 0.65f;
+	bodyDef.isBullet = true;
+	bodyDef.gravityScale = 1.0f;
 	bodyDef.type = b3_dynamicBody;
-	bodyDef.angularDamping = 0.3f;
-	bodyDef.linearDamping = 0.6f;
+	bodyDef.angularDamping = 2.5f;
+	bodyDef.linearDamping = 0.8f;
 	bodyDef.position = { .x = t.pos.x, .y = t.pos.y, .z = t.pos.z };
 
 	b3BodyId bodyId{ b3CreateBody(worldId, &bodyDef) };
 	b3ShapeDef shapeDef{ b3DefaultShapeDef() };
 	shapeDef.density = 10.0f;
-	shapeDef.baseMaterial.friction = 0.8f;
-	shapeDef.baseMaterial.restitution = 0.1f;
+	shapeDef.baseMaterial.friction = 0.0f;
+	shapeDef.baseMaterial.restitution = 0.0f;
 
 	b3Sphere sphere{ .center = b3Vec3_zero, .radius = 0.5f };
 	b3CreateSphereShape(bodyId, &shapeDef, &sphere);

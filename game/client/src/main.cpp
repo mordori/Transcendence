@@ -1,3 +1,5 @@
+#include <algorithm>
+#include <chrono>
 #include <iostream>
 #include <utility>
 
@@ -18,39 +20,89 @@
 #include "emscripten/html5.h"
 #endif
 
-struct GameState {
+struct ClientState {
 	entt::registry registry;
+	// Network receiver
+	// WebSocket
+
 	bool is_running{ true };
 };
 
-void update(void* arg) {
-	auto* state{ static_cast<GameState*>(arg) };
-	float deltaTime{ 1.0f / 60.0f };
+// ClientState* clientState{ nullptr };
 
-	core::physics::update(state->registry, deltaTime);
-	client::renderer::render(state->registry);
+// Stand-alone player version
+void update(void* arg) {
+	auto* state{ static_cast<ClientState*>(arg) };
+	static auto lastTime{ std::chrono::steady_clock::now() };
+	auto currentTime{ std::chrono::steady_clock::now() };
+
+	float deltaTime{ std::chrono::duration<float>(currentTime - lastTime).count() };
+	// std::cout << "deltaTime: " << deltaTime << " (FPS: " << 1.0f / deltaTime << ")\n";
+	deltaTime = std::min(deltaTime, 0.1f);
+	static float smoothDelta = deltaTime;
+	smoothDelta = (smoothDelta * 0.9f) + (deltaTime * 0.1f);
+
+	lastTime = currentTime;
+
+	static float timeAccumulator{};
+	timeAccumulator += smoothDelta;
+
+	const float fixedTimeStep = 1.0f / 60.0f;
+
+	while (timeAccumulator >= fixedTimeStep) {
+		core::physics::update(state->registry, fixedTimeStep);
+		timeAccumulator -= fixedTimeStep;
+	}
+
+	float alpha = timeAccumulator / fixedTimeStep;
+	alpha = std::clamp(alpha, 0.0f, 1.0f);
+	client::renderer::render(state->registry, smoothDelta, alpha);
 }
 
+// TODO: Dedicated server version
+void update() {
+	// 1. Process incoming snapshots from server
+	// 2. Poll local player inputs
+	// 3. Send inputs to server
+
+	// client::renderer::render(clientState->registry);
+}
+
+// int main() {
+// 	std::cout << "[Client] Starting...\n";
+// 	clientState = new ClientState();
+
+// 	client::input::setup(clientState->registry, player);
+
+// 	client::renderer::initWebGPU([](bool success) {
+// 		if (!success) {
+// 			std::cerr << "[WebGPU] Initialization failed. Aborting.\n";
+// 			emscripten_force_exit(1);
+// 			return;
+// 		}
+
+// 		emscripten_set_main_loop(update, 0, false);
+// 	});
+// 	emscripten_exit_with_live_runtime();
+
+// 	return 0;
+// }
+
 int main() {
-#ifndef __EMSCRIPTEN__
-	std::cerr << "Error: Emscripten not found!";
-	return 1;
-#endif
-
 	std::cout << "[Client] Starting...\n";
-	auto* state{ new GameState() };
+	auto* clientState = new ClientState();
 
-	core::physics::setup(state->registry);
-	auto worldId{ state->registry.ctx().get<World>().id };
+	core::physics::setup(clientState->registry);
+	auto worldId{ clientState->registry.ctx().get<World>().id };
 
-	core::spawn::ground(worldId);
+	// core::spawn::ground(worldId);
 
-	auto player{ core::spawn::player(state->registry, worldId) };
-	state->registry.emplace<PlayerTag>(player);
+	auto player{ core::spawn::player(clientState->registry, worldId) };
+	clientState->registry.emplace<PlayerTag>(player);
 
-	client::input::setup(state->registry, player);
+	client::input::setup(clientState->registry, player);
 
-	client::renderer::initWebGPU([state, player, worldId](bool success) {
+	client::renderer::initWebGPU([clientState, player, worldId](bool success) {
 		if (!success) {
 			emscripten_force_exit(1);
 			return;
@@ -58,19 +110,26 @@ int main() {
 
 		auto meshPlayer = client::renderer::loadMesh("/models/car.glb");
 		auto renderablePlayer = client::renderer::createRenderable(meshPlayer.value());
-		state->registry.emplace<Renderable>(player, std::move(renderablePlayer));
+		clientState->registry.emplace<Renderable>(player, std::move(renderablePlayer));
+
+		auto& controller{ clientState->registry.get<PlayerController>(player) };
+		auto meshWheel = client::renderer::loadMesh("/models/wheel.glb");
+		auto renderableFLWheel = client::renderer::createRenderable(meshWheel.value());
+		auto renderableFRWheel = client::renderer::createRenderable(meshWheel.value());
+		clientState->registry.emplace<Renderable>(controller.frontLeftWheel, std::move(renderableFLWheel));
+		clientState->registry.emplace<Renderable>(controller.frontRightWheel, std::move(renderableFRWheel));
 
 		auto meshStadium = client::renderer::loadMesh("/models/cylinder.glb");
-		auto stadium = core::spawn::stadium(state->registry, worldId, meshStadium.value());
+		auto stadium = core::spawn::stadium(clientState->registry, worldId, meshStadium.value());
 		auto renderableStadium = client::renderer::createRenderable(meshStadium.value());
-		state->registry.emplace<Renderable>(stadium, std::move(renderableStadium));
+		clientState->registry.emplace<Renderable>(stadium, std::move(renderableStadium));
 
 		auto meshBall = client::renderer::loadMesh("/models/ball.glb");
-		auto ball = core::spawn::ball(state->registry, worldId);
+		auto ball = core::spawn::ball(clientState->registry, worldId);
 		auto renderableBall = client::renderer::createRenderable(meshBall.value());
-		state->registry.emplace<Renderable>(ball, std::move(renderableBall));
+		clientState->registry.emplace<Renderable>(ball, std::move(renderableBall));
 
-		emscripten_set_main_loop_arg(update, state, 0, false);
+		emscripten_set_main_loop_arg(update, clientState, 0, false);
 	});
 	emscripten_exit_with_live_runtime();
 
