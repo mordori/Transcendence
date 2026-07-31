@@ -9,6 +9,7 @@
 #include "box3d/types.h"
 #include "components/input.hpp"
 #include "components/physics.hpp"
+#include "components/events.hpp"
 #include "entt/entity/fwd.hpp"
 #include "glm/common.hpp"
 #include "glm/ext/matrix_float3x3.hpp"
@@ -28,6 +29,7 @@ void setupPhysics(entt::registry& registry) {
 	b3WorldDef def{ b3DefaultWorldDef() };
 	b3WorldId id{ b3CreateWorld(&def) };
 	registry.ctx().emplace<World>(id);
+	registry.ctx().emplace<FrameEvents>();
 }
 
 void updatePhysics(entt::registry& registry, float dt) {
@@ -160,6 +162,15 @@ void updatePhysics(entt::registry& registry, float dt) {
 	}
 
 	b3World_Step(worldId, dt, 4);
+	
+	auto& frame{ registry.ctx().get<FrameEvents>() };
+	frame.impacts.clear();
+
+	b3ContactEvents contacts{ b3World_GetContactEvents(worldId) };
+	for (int i = 0; i < contacts.hitCount; ++i) {
+		const b3ContactHitEvent& hit{ contacts.hitEvents[i] };
+		frame.impacts.push_back({ { hit.point.x, hit.point.y, hit.point.z }, hit.approachSpeed });
+	}
 
 	auto transformView = registry.view<Transform, RigidBody>();
 	for (auto entity : transformView) {

@@ -23,6 +23,7 @@
 #include "box3d/id.h"
 #include "components/physics.hpp"
 #include "components/renderable.hpp"
+#include "components/audio.hpp"
 #include "entt/entity/fwd.hpp"
 #include "entt/entt.hpp"
 #include "factories.hpp"
@@ -30,6 +31,8 @@
 #include "systems/physics.hpp"
 #include "systems/render.hpp"
 #include "systems/renderable.hpp"
+#include "systems/audio.hpp"
+
 
 #ifdef __EMSCRIPTEN__
 #include "emscripten.h"
@@ -47,6 +50,7 @@ void mainLoop(void* arg) {
 	float dt{ 1.0f / 60.0f };
 
 	core::systems::updatePhysics(state->registry, dt);
+	client::systems::updateAudio(state->registry, dt);
 	client::systems::render(state->registry);
 }
 
@@ -60,6 +64,7 @@ int main() {
 	auto* state{ new GameState() };
 
 	core::systems::setupPhysics(state->registry);
+	client::systems::setupAudio(state->registry);
 	auto worldId{ state->registry.ctx().get<World>().id };
 
 	core::factories::spawnGround(worldId);

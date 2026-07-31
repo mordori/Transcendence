@@ -14,12 +14,32 @@ NAME	:=transcendence
 PROC	:=-j$(shell nproc 2>/dev/null || sysctl -n hw.ncpu 2>/dev/null || echo 4)
 PKG		:=$(shell command -v pacman >/dev/null 2>&1 && echo pacman || { command -v apt-get >/dev/null 2>&1 && echo apt || echo unknown; })
 
+# The FMOD SDK cannot be committed: its EULA forbids redistributing SDK files.
+FMOD_DIR	:=game/client/lib/fmod
+FMOD_LIB	:=$(FMOD_DIR)/api/studio/lib/w32/fmodstudioL_wasm.a
+
 all: build run
 
-build:
+build: fmod-check
 	@emcmake cmake -S game -B game/build
-	@ln -sf game/build/compile_commands.json game/compile_commands.json
+	@ln -sf build/compile_commands.json game/compile_commands.json
 	@cmake --build game/build $(PROC)
+
+fmod-check:
+	@if [ ! -f "$(FMOD_LIB)" ]; then \
+		echo; \
+		echo -e "$(RED)FMOD SDK not found.$(COLOR)  Expected: $(FMOD_LIB)"; \
+		echo; \
+		echo -e "$(YELLOW)It cannot be committed - the FMOD EULA (1.3.iii) forbids"; \
+		echo -e "redistributing SDK files. Free for educational use.$(COLOR)"; \
+		echo; \
+		echo -e "  1. Download the $(BLUE)HTML5$(COLOR) build of FMOD Engine:"; \
+		echo -e "       $(BLUE)https://www.fmod.com/download$(COLOR)  (Engine -> HTML5)"; \
+		echo -e "  2. Extract it so that this path exists:"; \
+		echo    "       $(FMOD_DIR)/api/studio/lib/w32/"; \
+		echo; \
+		exit 1; \
+	fi
 
 run:
 	@docker compose up -d --build
@@ -104,4 +124,4 @@ dependencies:
 	fi
 	@echo
 
-.PHONY: all build run dev dependencies down logs logs-server clean fclean re
+.PHONY: all build run dev dependencies fmod-check down logs logs-server clean fclean re

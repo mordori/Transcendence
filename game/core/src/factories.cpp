@@ -90,6 +90,8 @@ entt::entity spawnBall(entt::registry& registry, b3WorldId world_id) {
 	shapeDef.density = 0.0001f;
 	shapeDef.baseMaterial.friction = 0.1f;
 	shapeDef.baseMaterial.restitution = 0.75f;
+	// to know when car hits the ball
+	shapeDef.enableHitEvents = true;
 
 	b3Sphere sphere{ .center = b3Vec3_zero, .radius = 2.0f };
 	b3CreateSphereShape(bodyId, &shapeDef, &sphere);

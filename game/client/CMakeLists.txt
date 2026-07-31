@@ -5,14 +5,24 @@ add_executable(${TARGET_NAME}
 	src/systems/input.cpp
 	src/systems/render.cpp
 	src/systems/renderable.cpp
+	src/systems/audio.cpp
 )
 
-target_link_libraries(${TARGET_NAME} PRIVATE core)
+target_link_libraries(${TARGET_NAME} PRIVATE
+	core
+	${CMAKE_CURRENT_SOURCE_DIR}/lib/fmod/api/studio/lib/w32/fmodstudioL_wasm.a
+)
 
 target_include_directories(${TARGET_NAME} PUBLIC
 	${CMAKE_CURRENT_SOURCE_DIR}/include
 	${CMAKE_CURRENT_SOURCE_DIR}/lib
 )
+
+target_include_directories(${TARGET_NAME} SYSTEM PRIVATE
+	${CMAKE_CURRENT_SOURCE_DIR}/lib/fmod/api/core/inc
+	${CMAKE_CURRENT_SOURCE_DIR}/lib/fmod/api/studio/inc
+)
+
 target_compile_options(${TARGET_NAME} PRIVATE
 	-Wall -Wextra -Werror -pedantic
 	-Wno-deprecated-literal-operator -Wno-unused-template
@@ -33,5 +43,5 @@ target_link_options(${TARGET_NAME} PRIVATE
 	"-sMODULARIZE=1"
 	"-sEXPORT_ES6=1"
 	"-sEXPORT_NAME='createEngine'"
-	"-sEXPORTED_RUNTIME_METHODS=[\"FS\"]"
+	"-sEXPORTED_RUNTIME_METHODS=[\"FS\",\"ccall\",\"cwrap\",\"setValue\",\"getValue\"]"
 )
