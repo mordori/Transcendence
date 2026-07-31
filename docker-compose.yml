@@ -3,24 +3,23 @@ services:
     build:
       context: ./frontend
     container_name: frontend
-    ports:
-      - "8080:80"
     networks:
       - network
 
-  # nginx:
-  #   build:
-  #     context: ./nginx
-  #   restart: unless-stopped
-  #   ports:
-  #     - "443:443"
-  #     - "80:80"
-  #   depends_on:
-  #     - frontend
-  #     - backend
-  #     - game-server
-  #   networks:
-  #     - network
+  nginx:
+    build:
+      context: ./nginx
+    container_name: nginx
+    restart: unless-stopped
+    ports:
+      - "443:443"
+      - "80:80"
+    depends_on:
+      - frontend
+      # - backend
+      # - game-server
+    networks:
+      - network
 
   # backend:
   #   build:
