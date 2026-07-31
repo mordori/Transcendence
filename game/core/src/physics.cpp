@@ -117,7 +117,7 @@ void updatePlayerControllers(entt::registry& registry, float fixedTimeStep, b3Wo
 			}
 		}
 
-		float alignSpeed{ player.isGrounded ? 3.5f : 1.5f };
+		float alignSpeed{ player.isGrounded ? 5.5f : 1.5f };
 		if (player.isGrounded && glm::dot(player.up, targetNormal) < 0.5f) {
 			alignSpeed = 7.0f;
 		}
@@ -156,7 +156,7 @@ void updatePlayerControllers(entt::registry& registry, float fixedTimeStep, b3Wo
 		float moveSpeed{};
 		moveSpeed = (glm::dot(player.up, targetNormal) < 0.9f) ? 4.0f : 35.0f;
 		if (!player.isGrounded)
-			moveSpeed = std::min(moveSpeed, 15.0f);
+			moveSpeed = std::min(moveSpeed, 20.0f);
 		if (move < 0.0f)
 			moveSpeed *= 0.8f;
 		moveSpeed = move * moveSpeed * mass;

@@ -49,8 +49,8 @@ void resizeSurface() {
 	double width{}, height{};
 	emscripten_get_element_css_size("#engine-canvas", &width, &height);
 	double dpr = emscripten_get_device_pixel_ratio();
-	ctx.config.width = static_cast<int32_t>(width * dpr);
-	ctx.config.height = static_cast<int32_t>(height * dpr);
+	ctx.config.width = static_cast<int32_t>(width / dpr);
+	ctx.config.height = static_cast<int32_t>(height / dpr);
 	ctx.aspect = static_cast<float>(ctx.config.width) / static_cast<float>(ctx.config.height);
 	ctx.config.usage = wgpu::TextureUsage::RenderAttachment;
 	ctx.config.alphaMode = wgpu::CompositeAlphaMode::Auto;
@@ -282,7 +282,7 @@ void render(entt::registry& registry, float deltaTime, float alpha) {
 			firstFrame = false;
 		}
 
-		float smoothFactor = std::clamp(12.5f * deltaTime, 0.0f, 1.0f);
+		float smoothFactor = std::clamp(15.0f * deltaTime, 0.0f, 1.0f);
 		smoothYaw = glm::mix(smoothYaw, player.camYaw, smoothFactor);
 		smoothPitch = glm::mix(smoothPitch, player.camPitch, smoothFactor);
 		glm::vec3 visualPos = glm::mix(transform.prevPos, transform.pos, alpha);
