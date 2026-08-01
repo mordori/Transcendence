@@ -31,9 +31,9 @@ FetchContent_Declare(
 FetchContent_MakeAvailable(glaze)
 
 add_library(${TARGET_NAME} STATIC
-	src/factories.cpp
+	src/spawn.cpp
 	src/utils/files.cpp
-	src/systems/physics.cpp
+	src/physics.cpp
 )
 
 target_link_libraries(${TARGET_NAME} PUBLIC

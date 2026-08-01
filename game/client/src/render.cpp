@@ -1,7 +1,8 @@
-#include "systems/render.hpp"
+#include "render.hpp"
 
 #include <sys/types.h>
 
+#include <algorithm>
 #include <array>
 #include <cmath>
 #include <cstdint>
@@ -11,14 +12,17 @@
 #include <string>
 #include <utility>
 
-#include "components/input.hpp"
 #include "components/physics.hpp"
 #include "components/renderable.hpp"
 #include "entt/entity/fwd.hpp"
+#include "glm/common.hpp"
 #include "glm/ext/matrix_clip_space.hpp"
 #include "glm/ext/matrix_float4x4.hpp"
 #include "glm/ext/matrix_transform.hpp"
+#include "glm/ext/quaternion_common.hpp"
+#include "glm/ext/quaternion_geometric.hpp"
 #include "glm/ext/vector_float3.hpp"
+#include "glm/fwd.hpp"
 #include "glm/gtc/quaternion.hpp"
 #include "glm/trigonometric.hpp"
 #include "utils/files.hpp"
@@ -29,7 +33,7 @@
 #include "emscripten/html5.h"
 #endif
 
-namespace client::systems {
+namespace client::renderer {
 
 bool CreateRenderPipeline();
 
@@ -45,8 +49,8 @@ void resizeSurface() {
 	double width{}, height{};
 	emscripten_get_element_css_size("#engine-canvas", &width, &height);
 	double dpr = emscripten_get_device_pixel_ratio();
-	ctx.config.width = static_cast<int32_t>(width * dpr);
-	ctx.config.height = static_cast<int32_t>(height * dpr);
+	ctx.config.width = static_cast<int32_t>(width / dpr);
+	ctx.config.height = static_cast<int32_t>(height / dpr);
 	ctx.aspect = static_cast<float>(ctx.config.width) / static_cast<float>(ctx.config.height);
 	ctx.config.usage = wgpu::TextureUsage::RenderAttachment;
 	ctx.config.alphaMode = wgpu::CompositeAlphaMode::Auto;
@@ -231,7 +235,7 @@ bool CreateRenderPipeline() {
 	return true;
 }
 
-void render(entt::registry& registry) {
+void render(entt::registry& registry, float deltaTime, float alpha) {
 	if (!ctx.device)
 		return;
 
@@ -266,21 +270,36 @@ void render(entt::registry& registry) {
 	glm::vec3 cameraPos{ 0.0f, 5.0f, 10.0f };
 	glm::vec3 targetPos{ 0.0f, 0.0f, 0.0f };
 
+	static float smoothYaw{};
+	static float smoothPitch{};
+	static bool firstFrame{ true };
+
 	auto playerView = registry.view<const PlayerTag, const Transform, const PlayerController>();
 	for (auto [entity, transform, player] : playerView.each()) {
+		if (firstFrame) {
+			smoothYaw = player.camYaw;
+			smoothPitch = player.camPitch;
+			firstFrame = false;
+		}
+
+		float smoothFactor = std::clamp(15.0f * deltaTime, 0.0f, 1.0f);
+		smoothYaw = glm::mix(smoothYaw, player.camYaw, smoothFactor);
+		smoothPitch = glm::mix(smoothPitch, player.camPitch, smoothFactor);
+		glm::vec3 visualPos = glm::mix(transform.prevPos, transform.pos, alpha);
+
 		glm::vec3 up = glm::vec3{ 0.0f, 1.5f, 0.0f };
 		float distance = 4.3f;
-		float horizontal{ distance * std::cos(player.camPitch) };
-		float vertical{ distance * std::sin(player.camPitch) };
+		float horizontal{ distance * std::cos(smoothPitch) };
+		float vertical{ distance * std::sin(smoothPitch) };
 
 		glm::vec3 offset{ //
-			horizontal * std::sin(player.camYaw),
+			horizontal * std::sin(smoothYaw),
 			-vertical,
-			horizontal * std::cos(player.camYaw)
+			horizontal * std::cos(smoothYaw)
 		};
 
-		targetPos = transform.pos;
-		cameraPos = transform.pos + up + offset;
+		targetPos = visualPos;
+		cameraPos = visualPos + up + offset;
 	}
 
 	glm::mat4 proj = glm::perspective(glm::radians(75.0f), ctx.aspect, 0.1f, 100.0f);
@@ -289,8 +308,15 @@ void render(entt::registry& registry) {
 
 	auto renderableView = registry.view<const Transform, const Renderable>();
 	for (auto [entity, transform, renderable] : renderableView.each()) {
-		glm::mat4 model = glm::translate(glm::mat4(1.0f), transform.pos);
-		model = model * glm::mat4_cast(transform.rot);
+		glm::vec3 visualPos = glm::mix(transform.prevPos, transform.pos, alpha);
+		glm::quat targetRot = transform.rot;
+		if (glm::dot(transform.prevRot, targetRot) < 0.0f) {
+			targetRot = -targetRot;
+		}
+		glm::quat visualRot = glm::normalize(glm::slerp(transform.prevRot, targetRot, alpha));
+
+		glm::mat4 model = glm::translate(glm::mat4(1.0f), visualPos);
+		model = model * glm::mat4_cast(visualRot);
 		model = glm::scale(model, transform.scale);
 		glm::mat4 mvp = vp * model;
 

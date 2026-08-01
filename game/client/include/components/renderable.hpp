@@ -1,9 +1,7 @@
 #pragma once
 
 #include <cstdint>
-#include <vector>
 
-#include "systems/render.hpp"
 #include "webgpu/webgpu_cpp.h"
 
 struct Renderable {

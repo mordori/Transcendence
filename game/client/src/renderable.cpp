@@ -11,11 +11,11 @@
 #include "cgltf.h"
 #include "components/physics.hpp"
 #include "glm/ext/matrix_float4x4.hpp"
-#include "systems/render.hpp"
-#include "systems/renderable.hpp"
+#include "render.hpp"
+#include "renderable.hpp"
 #include "webgpu/webgpu_cpp.h"
 
-namespace client::systems {
+namespace client::renderer {
 
 Renderable createRenderable(const MeshData& mesh) {
 	Renderable r{};

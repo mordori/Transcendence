@@ -6,7 +6,7 @@
 #include "components/physics.hpp"
 #include "components/renderable.hpp"
 
-namespace client::systems {
+namespace client::renderer {
 
 MeshData createMeshCube();
 std::optional<MeshData> loadMesh(const std::string& filepath);

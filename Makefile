@@ -17,7 +17,7 @@ PKG		:=$(shell command -v pacman >/dev/null 2>&1 && echo pacman || { command -v 
 all: build run
 
 build:
-	@emcmake cmake -S game -B game/build
+	@emcmake cmake -S game -B game/build -G Ninja -DCMAKE_EXPORT_COMPILE_COMMANDS=1
 	@ln -sf game/build/compile_commands.json game/compile_commands.json
 	@cmake --build game/build $(PROC)
 
@@ -58,10 +58,10 @@ dependencies:
 	@echo -e "$(BLUE)Using package manager: $(PKG)$(COLOR)"
 	@if [ "$(PKG)" = "pacman" ]; then \
 		sudo pacman -Syu --noconfirm; \
-		sudo pacman -S --needed --noconfirm cmake curl git; \
+		sudo pacman -S --needed --noconfirm cmake curl git ninja; \
 	else \
 		sudo apt update && sudo apt upgrade -y; \
-		sudo apt install cmake curl git -y; \
+		sudo apt install cmake curl git ninja-build -y; \
 	fi
 	@if ! command -v docker >/dev/null 2>&1; then \
 		echo -e "$(YELLOW)Installing Docker...$(COLOR)"; \
@@ -104,4 +104,38 @@ dependencies:
 	fi
 	@echo
 
-.PHONY: all build run dev dependencies down logs logs-server clean fclean re
+deps-42:
+	@echo -e "$(BLUE)Setting up 42 cluster environment (Rootless)...$(COLOR)"
+	@mkdir -p $$HOME/tools/bin
+	@echo -e "$(YELLOW)Downloading local CMake...$(COLOR)"
+	@curl -fsSL https://github.com/Kitware/CMake/releases/download/v3.29.3/cmake-3.29.3-linux-x86_64.tar.gz | tar -xz -C $$HOME/tools --strip-components=1
+	@echo -e "$(YELLOW)Downloading local Ninja...$(COLOR)"
+	@curl -fsSL -o $$HOME/tools/ninja.zip https://github.com/ninja-build/ninja/releases/download/v1.12.0/ninja-linux.zip
+	@unzip -q -o $$HOME/tools/ninja.zip -d $$HOME/tools/bin
+	@rm -f $$HOME/tools/ninja.zip
+	@if ! command -v docker >/dev/null 2>&1; then \
+		echo -e "$(RED)Docker not found. Please launch it via the Managed Software Center or Applications folder.$(COLOR)"; \
+	else \
+		echo -e "$(GREEN)Docker is already running.$(COLOR)"; \
+	fi
+	@if [ ! -d "$$HOME/tools/emsdk" ]; then \
+		echo -e "$(YELLOW)Downloading emsdk...$(COLOR)"; \
+		cd $$HOME/tools && git clone https://github.com/emscripten-core/emsdk.git; \
+	else \
+		echo -e "$(GREEN)emsdk already exists. Updating...$(COLOR)"; \
+		cd $$HOME/tools/emsdk && git pull; \
+	fi
+	@cd $$HOME/tools/emsdk && ./emsdk install latest && ./emsdk activate latest
+	@RC_FILE=$$(if [[ $$SHELL == *"zsh"* ]]; then echo "$$HOME/.zshrc"; else echo "$$HOME/.bashrc"; fi); \
+	if ! grep -q "emsdk_env.sh" "$$RC_FILE" 2>/dev/null; then \
+		echo -e "\n# 42 Build Tools & Emscripten" >> "$$RC_FILE"; \
+		echo 'export PATH="$$HOME/tools/bin:$$PATH"' >> "$$RC_FILE"; \
+		echo 'source $$HOME/tools/emsdk/emsdk_env.sh > /dev/null 2>&1' >> "$$RC_FILE"; \
+	fi
+	@echo
+	@echo -e "$(GREEN)42 Cluster tools installed to ~/tools !$(COLOR)"
+	@echo -e "$(YELLOW)To apply the changes to your current terminal, run:$(COLOR)"
+	@if [[ $$SHELL == *"zsh"* ]]; then echo -e "  source ~/.zshrc"; else echo -e "  source ~/.bashrc"; fi
+	@echo
+
+.PHONY: all build run dev dependencies down logs logs-server clean fclean re deps-42

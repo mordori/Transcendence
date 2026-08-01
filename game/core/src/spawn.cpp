@@ -1,4 +1,4 @@
-#include "factories.hpp"
+#include "spawn.hpp"
 
 #include <cstddef>
 #include <cstdint>
@@ -13,13 +13,17 @@
 #include "components/physics.hpp"
 #include "entt/entity/fwd.hpp"
 #include "entt/entt.hpp"
+#include "glm/ext/quaternion_trigonometric.hpp"
+#include "glm/ext/vector_float3.hpp"
+#include "glm/fwd.hpp"
+#include "glm/trigonometric.hpp"
 
-namespace core::factories {
+namespace core::spawn {
 
-void spawnGround(b3WorldId world_id) {
+void ground(b3WorldId worldId) {
 	b3BodyDef bodyDef{ b3DefaultBodyDef() };
 	bodyDef.position = { .x = 0.0f, .y = -2.0f, .z = 0.0f };
-	b3BodyId bodyId{ b3CreateBody(world_id, &bodyDef) };
+	b3BodyId bodyId{ b3CreateBody(worldId, &bodyDef) };
 	b3ShapeDef shapeDef{ b3DefaultShapeDef() };
 	shapeDef.baseMaterial.friction = 0.1f;
 
@@ -27,13 +31,13 @@ void spawnGround(b3WorldId world_id) {
 	b3CreateHullShape(bodyId, &shapeDef, &boxHull.base);
 }
 
-entt::entity spawnStadium(entt::registry& registry, b3WorldId world_id, const MeshData& meshData) {
+entt::entity stadium(entt::registry& registry, b3WorldId worldId, const MeshData& meshData) {
 	auto stadium = registry.create();
 
 	b3BodyDef bodyDef{ b3DefaultBodyDef() };
 	bodyDef.position = b3Vec3_zero;
 	bodyDef.type = b3_staticBody;
-	b3BodyId bodyId{ b3CreateBody(world_id, &bodyDef) };
+	b3BodyId bodyId{ b3CreateBody(worldId, &bodyDef) };
 
 	b3ShapeDef shapeDef{ b3DefaultShapeDef() };
 	shapeDef.baseMaterial.friction = 0.1f;
@@ -71,25 +75,26 @@ entt::entity spawnStadium(entt::registry& registry, b3WorldId world_id, const Me
 	return stadium;
 }
 
-entt::entity spawnBall(entt::registry& registry, b3WorldId world_id) {
+entt::entity ball(entt::registry& registry, b3WorldId worldId) {
 	auto ball{ registry.create() };
-	registry.emplace<InputComponent>(ball);
+	registry.emplace<BallTag>(ball);
 
-	Transform t{ .pos = { 0.0f, 1.0f, 0.0f }, .scale = { 4.0f, 4.0f, 4.0f } };
+	Transform t{ .pos = { 0.0f, 2.0f, 0.0f }, .scale = { 4.0f, 4.0f, 4.0f } };
+	t.prevPos = t.pos;
 	registry.emplace<Transform>(ball, t);
 
 	b3BodyDef bodyDef{ b3DefaultBodyDef() };
 	bodyDef.type = b3_dynamicBody;
 	bodyDef.gravityScale = 0.25f;
-	bodyDef.angularDamping = 0.2f;
-	bodyDef.linearDamping = 0.1f;
+	bodyDef.angularDamping = 0.5f;
+	bodyDef.linearDamping = 0.3f;
 	bodyDef.position = { .x = t.pos.x, .y = t.pos.y, .z = t.pos.z };
 
-	b3BodyId bodyId{ b3CreateBody(world_id, &bodyDef) };
+	b3BodyId bodyId{ b3CreateBody(worldId, &bodyDef) };
 	b3ShapeDef shapeDef{ b3DefaultShapeDef() };
 	shapeDef.density = 0.0001f;
 	shapeDef.baseMaterial.friction = 0.1f;
-	shapeDef.baseMaterial.restitution = 0.75f;
+	shapeDef.baseMaterial.restitution = 0.5f;
 
 	b3Sphere sphere{ .center = b3Vec3_zero, .radius = 2.0f };
 	b3CreateSphereShape(bodyId, &shapeDef, &sphere);
@@ -98,26 +103,58 @@ entt::entity spawnBall(entt::registry& registry, b3WorldId world_id) {
 	return ball;
 }
 
-entt::entity spawnPlayer(entt::registry& registry, b3WorldId world_id) {
+entt::entity player(entt::registry& registry, b3WorldId worldId) {
 	auto player{ registry.create() };
 	registry.emplace<InputComponent>(player);
-	registry.emplace<PlayerController>(player);
+	auto& controller{ registry.emplace<PlayerController>(player) };
 
-	Transform t{ .pos = { 0.0f, 1.0f, 10.0f } };
+	Transform t{ .pos = { 0.0f, 0.5f, 10.0f } };
+	t.prevPos = t.pos;
 	registry.emplace<Transform>(player, t);
 
+	glm::vec3 offsetFR{ 0.37315f, -0.310476f, -0.456852f };
+	glm::vec3 offsetFL{ -0.37315f, -0.310476f, -0.456852f };
+	glm::vec3 offsetRR{ 0.37315f, -0.310476f, 0.711378f };
+	glm::vec3 offsetRL{ -0.37315f, -0.310476f, 0.711378f };
+
+	controller.wheelFR = registry.create();
+	Transform tFR{ .pos = t.pos + offsetFR };
+	tFR.prevPos = tFR.pos;
+	glm::quat rot180 = glm::angleAxis(glm::radians(180.0f), glm::vec3(0.0f, 1.0f, 0.0f));
+	tFR.rot = tFR.rot * rot180;
+	tFR.prevRot = tFR.rot;
+	registry.emplace<Transform>(controller.wheelFR, tFR);
+
+	controller.wheelFL = registry.create();
+	Transform tFL{ .pos = t.pos + offsetFL };
+	tFL.prevPos = tFL.pos;
+	registry.emplace<Transform>(controller.wheelFL, tFL);
+
+	controller.wheelRR = registry.create();
+	Transform tRR{ .pos = t.pos + offsetRR };
+	tRR.prevPos = tRR.pos;
+	tRR.rot = tRR.rot * rot180;
+	tRR.prevRot = tRR.rot;
+	registry.emplace<Transform>(controller.wheelRR, tRR);
+
+	controller.wheelRL = registry.create();
+	Transform tRL{ .pos = t.pos + offsetRL };
+	tRL.prevPos = tRL.pos;
+	registry.emplace<Transform>(controller.wheelRL, tRL);
+
 	b3BodyDef bodyDef{ b3DefaultBodyDef() };
-	bodyDef.gravityScale = 0.65f;
+	bodyDef.isBullet = true;
+	bodyDef.gravityScale = 1.0f;
 	bodyDef.type = b3_dynamicBody;
-	bodyDef.angularDamping = 0.3f;
-	bodyDef.linearDamping = 0.6f;
+	bodyDef.angularDamping = 2.5f;
+	bodyDef.linearDamping = 0.8f;
 	bodyDef.position = { .x = t.pos.x, .y = t.pos.y, .z = t.pos.z };
 
-	b3BodyId bodyId{ b3CreateBody(world_id, &bodyDef) };
+	b3BodyId bodyId{ b3CreateBody(worldId, &bodyDef) };
 	b3ShapeDef shapeDef{ b3DefaultShapeDef() };
 	shapeDef.density = 10.0f;
-	shapeDef.baseMaterial.friction = 0.8f;
-	shapeDef.baseMaterial.restitution = 0.1f;
+	shapeDef.baseMaterial.friction = 0.0f;
+	shapeDef.baseMaterial.restitution = 0.0f;
 
 	b3Sphere sphere{ .center = b3Vec3_zero, .radius = 0.5f };
 	b3CreateSphereShape(bodyId, &shapeDef, &sphere);

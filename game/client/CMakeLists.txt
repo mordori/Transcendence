@@ -2,9 +2,9 @@ set(TARGET_NAME client)
 
 add_executable(${TARGET_NAME}
 	src/main.cpp
-	src/systems/input.cpp
-	src/systems/render.cpp
-	src/systems/renderable.cpp
+	src/input.cpp
+	src/render.cpp
+	src/renderable.cpp
 )
 
 target_link_libraries(${TARGET_NAME} PRIVATE core)

@@ -9,7 +9,7 @@
 #include "glm/ext/matrix_float4x4.hpp"
 #include "webgpu/webgpu_cpp.h"
 
-namespace client::systems {
+namespace client::renderer {
 
 struct alignas(16) InstanceData {
 	glm::mat4 model;
@@ -47,5 +47,5 @@ struct RenderContext {
 
 RenderContext& getRenderContext();
 void initWebGPU(std::function<void(bool success)> initStatus);
-void render(entt::registry& registry);
+void render(entt::registry& registry, float deltaTime, float alpha);
 }
