@@ -116,8 +116,12 @@ int main() {
 		auto meshWheel = client::renderer::loadMesh("/models/wheel.glb");
 		auto renderableFLWheel = client::renderer::createRenderable(meshWheel.value());
 		auto renderableFRWheel = client::renderer::createRenderable(meshWheel.value());
-		clientState->registry.emplace<Renderable>(controller.frontLeftWheel, std::move(renderableFLWheel));
-		clientState->registry.emplace<Renderable>(controller.frontRightWheel, std::move(renderableFRWheel));
+		auto renderableRRWheel = client::renderer::createRenderable(meshWheel.value());
+		auto renderableRLWheel = client::renderer::createRenderable(meshWheel.value());
+		clientState->registry.emplace<Renderable>(controller.wheelFL, std::move(renderableFLWheel));
+		clientState->registry.emplace<Renderable>(controller.wheelFR, std::move(renderableFRWheel));
+		clientState->registry.emplace<Renderable>(controller.wheelRL, std::move(renderableRRWheel));
+		clientState->registry.emplace<Renderable>(controller.wheelRR, std::move(renderableRLWheel));
 
 		auto meshStadium = client::renderer::loadMesh("/models/cylinder.glb");
 		auto stadium = core::spawn::stadium(clientState->registry, worldId, meshStadium.value());

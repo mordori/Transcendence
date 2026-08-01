@@ -21,6 +21,7 @@
 #include "glm/fwd.hpp"
 #include "glm/geometric.hpp"
 #include "glm/glm.hpp"
+#include "glm/gtc/constants.hpp"
 #include "glm/gtc/quaternion.hpp"
 #include "glm/trigonometric.hpp"
 
@@ -55,7 +56,7 @@ void updatePlayerControllers(entt::registry& registry, float fixedTimeStep, b3Wo
 
 		float maxTurn{ glm::mix(0.7f, 0.25f, speedFactor) };
 		float targetSteering{ -turn * maxTurn };
-		float steerSpeed{ (turn != 0.0f) ? 5.0f : 8.0f };
+		float steerSpeed{ (turn != 0.0f) ? 2.5f : 4.7f };
 		player.steeringAngle = glm::mix(player.steeringAngle, targetSteering, steerSpeed * fixedTimeStep);
 
 		b3Vec3 rayOrigin = { .x = bodyPos.x, .y = bodyPos.y, .z = bodyPos.z };
@@ -95,7 +96,7 @@ void updatePlayerControllers(entt::registry& registry, float fixedTimeStep, b3Wo
 			}
 
 			if (input.jump && dotSurface >= -0.25f) {
-				float jumpSpeed{ 20.0f * mass };
+				float jumpSpeed{ 18.0f * mass };
 				b3Vec3 jumpImpulse{ //
 					.x = player.up.x * jumpSpeed,
 					.y = player.up.y * jumpSpeed,
@@ -117,22 +118,19 @@ void updatePlayerControllers(entt::registry& registry, float fixedTimeStep, b3Wo
 			}
 		}
 
-		float alignSpeed{ player.isGrounded ? 5.5f : 1.5f };
-		if (player.isGrounded && glm::dot(player.up, targetNormal) < 0.5f) {
-			alignSpeed = 7.0f;
-		}
+		float alignSpeed{ player.isGrounded ? 8.5f : 2.5f };
 
 		player.up = glm::normalize(glm::mix(player.up, targetNormal, alignSpeed * fixedTimeStep));
 
 		float yawDelta{};
 		if (player.isGrounded) {
-			float turnSensitivity{ 2.3f };
-			float rotationSpeed{ std::clamp(forwardSpeed, -12.0f, 20.0f) };
+			float turnSensitivity{ 1.5f };
+			float rotationSpeed{ std::clamp(forwardSpeed, -12.0f, 15.0f) };
 			yawDelta = (rotationSpeed / turnSensitivity) * std::sin(player.steeringAngle) * fixedTimeStep;
 		} else {
-			float airSpinSpeed{ 3.0f };
+			float airSpinSpeed{ 4.0f };
 			float dir{ (move < 0.0f) ? -1.0f : 1.0f };
-			yawDelta = -turn * dir * airSpinSpeed * fixedTimeStep;
+			yawDelta = (player.steeringAngle / maxTurn) * dir * airSpinSpeed * fixedTimeStep;
 		}
 
 		glm::quat steerRot{ glm::angleAxis(yawDelta, player.up) };
@@ -154,7 +152,7 @@ void updatePlayerControllers(entt::registry& registry, float fixedTimeStep, b3Wo
 		};
 
 		float moveSpeed{};
-		moveSpeed = (glm::dot(player.up, targetNormal) < 0.9f) ? 4.0f : 35.0f;
+		moveSpeed = (glm::dot(player.up, targetNormal) < 0.9f) ? 4.0f : 30.0f;
 		if (!player.isGrounded)
 			moveSpeed = std::min(moveSpeed, 20.0f);
 		if (move < 0.0f)
@@ -174,7 +172,7 @@ void updatePlayerControllers(entt::registry& registry, float fixedTimeStep, b3Wo
 		if (player.isGrounded) {
 			float rightSpeed{ glm::dot(velocity, right) };
 
-			float grip{ rightSpeed * 0.9f * mass };
+			float grip{ rightSpeed * 0.85f * mass };
 
 			b3Vec3 lateralImpulse{ //
 				.x = -right.x * grip,
@@ -184,7 +182,7 @@ void updatePlayerControllers(entt::registry& registry, float fixedTimeStep, b3Wo
 			b3Body_ApplyLinearImpulseToCenter(rb.id, lateralImpulse, true);
 
 			float dir{ (forwardSpeed >= 0.0f) ? 1.0f : -1.0f };
-			float drag{ std::abs(rightSpeed) * 0.3f * mass * dir };
+			float drag{ std::abs(rightSpeed) * 0.35f * mass * dir };
 			b3Vec3 scrubImpulse{ //
 				.x = -forward.x * drag,
 				.y = -forward.y * drag,
@@ -202,6 +200,8 @@ void updatePlayerControllers(entt::registry& registry, float fixedTimeStep, b3Wo
 				b3Body_ApplyForceToCenter(rb.id, downForce, true);
 			}
 		}
+
+		player.velocity = core::physics::b3ToGlm(b3Body_GetLinearVelocity(rb.id));
 	}
 }
 
@@ -237,25 +237,53 @@ void updateTransforms(entt::registry& registry) {
 			b3Quat rot = b3Body_GetRotation(rb.id);
 			transform.rot = glm::quat{ rot.s, rot.v.x, rot.v.y, rot.v.z };
 		} else {
-			auto& controller{ registry.get<PlayerController>(entity) };
+			auto& player{ registry.get<PlayerController>(entity) };
 
-			glm::vec3 leftOffset{ -0.37315f, -0.310476f, -0.456852f };
-			glm::vec3 rightOffset{ 0.37315f, -0.310476f, -0.456852f };
+			glm::vec3 offsetFL{ -0.37315f, -0.310476f, -0.456852f };
+			glm::vec3 offsetFR{ 0.37315f, -0.310476f, -0.456852f };
+			glm::vec3 offsetRL{ -0.37315f, -0.310476f, 0.711378f };
+			glm::vec3 offsetRR{ 0.37315f, -0.310476f, 0.711378f };
 
-			glm::quat wheelTurn = glm::angleAxis(controller.steeringAngle, glm::vec3(0.0f, 1.0f, 0.0f));
-			glm::quat finalWheelRot = transform.rot * wheelTurn;
+			glm::vec3 posDelta{ transform.pos - transform.prevPos };
+			glm::vec3 currentForward{ transform.rot * glm::vec3{ 0.0f, 0.0f, -1.0f } };
+			float distanceForward{ glm::dot(posDelta, currentForward) };
 
-			if (controller.frontLeftWheel != entt::null) {
-				auto& wheelT = registry.get<Transform>(controller.frontLeftWheel);
-				wheelT.pos = transform.pos + (transform.rot * leftOffset);
-				wheelT.rot = finalWheelRot;
+			float tireRadius{ 2.0f };
+			float maxVisualDist{ tireRadius * 0.4f };
+			float visualDist = std::clamp(distanceForward, -maxVisualDist, maxVisualDist);
+			player.wheelAngle -= (visualDist / tireRadius);
+			player.wheelAngle = std::fmod(player.wheelAngle, glm::two_pi<float>());
+
+			glm::quat rotSteer{ glm::angleAxis(player.steeringAngle, glm::vec3{ 0.0f, 1.0f, 0.0f }) };
+
+			if (player.wheelFL != entt::null) {
+				glm::quat rotRoll{ glm::angleAxis(player.wheelAngle, glm::vec3{ 1.0f, 0.0f, 0.0f }) };
+				auto& wheelT = registry.get<Transform>(player.wheelFL);
+				wheelT.pos = transform.pos + (transform.rot * offsetFL);
+				wheelT.rot = transform.rot * rotSteer * rotRoll;
 			}
 
-			if (controller.frontRightWheel != entt::null) {
-				auto& wheelT = registry.get<Transform>(controller.frontRightWheel);
-				wheelT.pos = transform.pos + (transform.rot * rightOffset);
+			if (player.wheelFR != entt::null) {
+				glm::quat rotRoll{ glm::angleAxis(-player.wheelAngle, glm::vec3{ 1.0f, 0.0f, 0.0f }) };
+				auto& wheelT = registry.get<Transform>(player.wheelFR);
+				wheelT.pos = transform.pos + (transform.rot * offsetFR);
 				glm::quat rot180 = glm::angleAxis(glm::radians(180.0f), glm::vec3(0.0f, 1.0f, 0.0f));
-				wheelT.rot = finalWheelRot * rot180;
+				wheelT.rot = transform.rot * rotSteer * rot180 * rotRoll;
+			}
+
+			if (player.wheelRL != entt::null) {
+				glm::quat rotRoll{ glm::angleAxis(player.wheelAngle, glm::vec3{ 1.0f, 0.0f, 0.0f }) };
+				auto& wheelT = registry.get<Transform>(player.wheelRL);
+				wheelT.pos = transform.pos + (transform.rot * offsetRL);
+				wheelT.rot = transform.rot * rotRoll;
+			}
+
+			if (player.wheelRR != entt::null) {
+				glm::quat rotRoll{ glm::angleAxis(-player.wheelAngle, glm::vec3{ 1.0f, 0.0f, 0.0f }) };
+				auto& wheelT = registry.get<Transform>(player.wheelRR);
+				wheelT.pos = transform.pos + (transform.rot * offsetRR);
+				glm::quat rot180 = glm::angleAxis(glm::radians(180.0f), glm::vec3(0.0f, 1.0f, 0.0f));
+				wheelT.rot = transform.rot * rot180 * rotRoll;
 			}
 		}
 	}

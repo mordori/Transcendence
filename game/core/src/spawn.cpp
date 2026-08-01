@@ -13,7 +13,10 @@
 #include "components/physics.hpp"
 #include "entt/entity/fwd.hpp"
 #include "entt/entt.hpp"
+#include "glm/ext/quaternion_trigonometric.hpp"
 #include "glm/ext/vector_float3.hpp"
+#include "glm/fwd.hpp"
+#include "glm/trigonometric.hpp"
 
 namespace core::spawn {
 
@@ -76,7 +79,7 @@ entt::entity ball(entt::registry& registry, b3WorldId worldId) {
 	auto ball{ registry.create() };
 	registry.emplace<BallTag>(ball);
 
-	Transform t{ .pos = { 0.0f, 1.0f, 0.0f }, .scale = { 4.0f, 4.0f, 4.0f } };
+	Transform t{ .pos = { 0.0f, 2.0f, 0.0f }, .scale = { 4.0f, 4.0f, 4.0f } };
 	t.prevPos = t.pos;
 	registry.emplace<Transform>(ball, t);
 
@@ -105,18 +108,39 @@ entt::entity player(entt::registry& registry, b3WorldId worldId) {
 	registry.emplace<InputComponent>(player);
 	auto& controller{ registry.emplace<PlayerController>(player) };
 
-	Transform t{ .pos = { 0.0f, 1.0f, 10.0f } };
+	Transform t{ .pos = { 0.0f, 0.5f, 10.0f } };
 	t.prevPos = t.pos;
 	registry.emplace<Transform>(player, t);
 
-	controller.frontRightWheel = registry.create();
-	Transform tFR{};
-	registry.emplace<Transform>(controller.frontRightWheel, tFR);
+	glm::vec3 offsetFR{ 0.37315f, -0.310476f, -0.456852f };
+	glm::vec3 offsetFL{ -0.37315f, -0.310476f, -0.456852f };
+	glm::vec3 offsetRR{ 0.37315f, -0.310476f, 0.711378f };
+	glm::vec3 offsetRL{ -0.37315f, -0.310476f, 0.711378f };
 
-	controller.frontLeftWheel = registry.create();
-	Transform tFL{};
-	// tFL.scale.x *= -1.0f;
-	registry.emplace<Transform>(controller.frontLeftWheel, tFL);
+	controller.wheelFR = registry.create();
+	Transform tFR{ .pos = t.pos + offsetFR };
+	tFR.prevPos = tFR.pos;
+	glm::quat rot180 = glm::angleAxis(glm::radians(180.0f), glm::vec3(0.0f, 1.0f, 0.0f));
+	tFR.rot = tFR.rot * rot180;
+	tFR.prevRot = tFR.rot;
+	registry.emplace<Transform>(controller.wheelFR, tFR);
+
+	controller.wheelFL = registry.create();
+	Transform tFL{ .pos = t.pos + offsetFL };
+	tFL.prevPos = tFL.pos;
+	registry.emplace<Transform>(controller.wheelFL, tFL);
+
+	controller.wheelRR = registry.create();
+	Transform tRR{ .pos = t.pos + offsetRR };
+	tRR.prevPos = tRR.pos;
+	tRR.rot = tRR.rot * rot180;
+	tRR.prevRot = tRR.rot;
+	registry.emplace<Transform>(controller.wheelRR, tRR);
+
+	controller.wheelRL = registry.create();
+	Transform tRL{ .pos = t.pos + offsetRL };
+	tRL.prevPos = tRL.pos;
+	registry.emplace<Transform>(controller.wheelRL, tRL);
 
 	b3BodyDef bodyDef{ b3DefaultBodyDef() };
 	bodyDef.isBullet = true;

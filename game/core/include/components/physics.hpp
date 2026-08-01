@@ -19,8 +19,12 @@ struct PlayerController {
 	float steeringAngle{};
 	float camYaw{};
 	float camPitch{ 0.2f };
-	entt::entity frontLeftWheel{ entt::null };
-	entt::entity frontRightWheel{ entt::null };
+	entt::entity wheelFL{ entt::null };
+	entt::entity wheelFR{ entt::null };
+	entt::entity wheelRL{ entt::null };
+	entt::entity wheelRR{ entt::null };
+	glm::vec3 velocity{};
+	float wheelAngle{};
 };
 
 struct Transform {
