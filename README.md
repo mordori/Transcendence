@@ -3,9 +3,15 @@
 ## Pre-requisites
 Assumes sudo and Make are installed
 
-Installs CMake, curl, Docker, and Emscripten
+Installs CMake, Ninja, curl, Docker, and Emscripten using apt or pacman
 ``` bash
 make dependencies
+```
+
+or
+Installs the dependencies without package manager, requires Docker to be installed (experimental)
+``` bash
+make deps-42
 ```
 
 ## Build

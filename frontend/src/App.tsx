@@ -15,15 +15,16 @@ export default function App() {
             if (!canvas) return;
 
             console.log("Downloading assets...");
-            const [shaderRes, modelRes, modelRes2, modelRes3, audioRes] = await Promise.all([
+            const [shaderRes, modelRes, modelRes2, modelRes3, modelRes4, audioRes] = await Promise.all([
                 fetch('/assets/shaders/bsdf.wgsl'),
                 fetch('/assets/models/ball.glb'),
                 fetch('/assets/models/cylinder.glb'),
                 fetch('/assets/models/car.glb'),
+                fetch('/assets/models/wheel.glb'),
                 fetch('/assets/audio/test.wav')
             ]);
 
-            const responses = [shaderRes, modelRes, modelRes2, modelRes3, audioRes];
+            const responses = [shaderRes, modelRes, modelRes2, modelRes3, modelRes4, audioRes];
             const failed = responses.filter(r => !r.ok);
             if (failed.length > 0) {
                 console.error("Failed to fetch assets:", failed.map(r => `${r.status} ${r.url}`));
@@ -34,6 +35,7 @@ export default function App() {
             const modelBuffer = await modelRes.arrayBuffer();
             const modelBuffer2 = await modelRes2.arrayBuffer();
             const modelBuffer3 = await modelRes3.arrayBuffer();
+            const modelBuffer4 = await modelRes4.arrayBuffer();
             const audioBuf = await audioRes.arrayBuffer();
 
             console.log("Booting C++ Engine...");
@@ -57,6 +59,7 @@ export default function App() {
                         Module.FS.writeFile('/models/ball.glb', new Uint8Array(modelBuffer));
                         Module.FS.writeFile('/models/cylinder.glb', new Uint8Array(modelBuffer2));
                         Module.FS.writeFile('/models/car.glb', new Uint8Array(modelBuffer3));
+                        Module.FS.writeFile('/models/wheel.glb', new Uint8Array(modelBuffer4));
                         Module.FS.writeFile('/audio/test.wav', new Uint8Array(audioBuf));
                         console.log("Assets successfully injected.");
                     } catch (e) {
