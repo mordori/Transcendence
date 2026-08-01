@@ -58,8 +58,10 @@ void    updateAudio(entt::registry& registry, float dt)
         for (const auto& impact : frame->impacts) {
             FMOD::Channel* channel{ nullptr };
             audio->core->playSound(audio->hitSound, nullptr, false, &channel);
-            if (channel)
+            if (channel){
                 channel->setVolume(std::clamp(impact.speed / 20.0f, 0.1f, 1.0f));
+                channel->setPitch(0.9f + (rand() % 200) / 1000.0f);
+            }
         }
     }
 
