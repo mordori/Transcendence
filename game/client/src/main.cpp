@@ -3,7 +3,9 @@
 #include <iostream>
 #include <utility>
 
+#include "audio.hpp"
 #include "box3d/id.h"
+#include "components/audio.hpp"
 #include "components/physics.hpp"
 #include "components/renderable.hpp"
 #include "entt/entity/fwd.hpp"
@@ -56,6 +58,7 @@ void update(void* arg) {
 
 	float alpha = timeAccumulator / fixedTimeStep;
 	alpha = std::clamp(alpha, 0.0f, 1.0f);
+	client::audio::update(state->registry, smoothDelta);
 	client::renderer::render(state->registry, smoothDelta, alpha);
 }
 
@@ -93,12 +96,14 @@ int main() {
 	auto* clientState = new ClientState();
 
 	core::physics::setup(clientState->registry);
+	client::audio::setup(clientState->registry);
 	auto worldId{ clientState->registry.ctx().get<World>().id };
 
 	// core::spawn::ground(worldId);
 
 	auto player{ core::spawn::player(clientState->registry, worldId) };
 	clientState->registry.emplace<PlayerTag>(player);
+	client::audio::attachEngine(clientState->registry, player);
 
 	client::input::setup(clientState->registry, player);
 

@@ -9,6 +9,7 @@
 #include "box3d/id.h"
 #include "box3d/math_functions.h"
 #include "box3d/types.h"
+#include "components/events.hpp"
 #include "components/input.hpp"
 #include "components/physics.hpp"
 #include "entt/entity/entity.hpp"
@@ -353,6 +354,16 @@ void setPreviousTransforms(entt::registry& registry) {
 		t.prevRot = t.rot;
 	}
 }
+
+void collectImpacts(entt::registry& registry, b3WorldId worldId) {
+	auto& frame{ registry.ctx().get<FrameEvents>() };
+
+	b3ContactEvents contacts{ b3World_GetContactEvents(worldId) };
+	for (int i = 0; i < contacts.hitCount; ++i) {
+		const b3ContactHitEvent& hit{ contacts.hitEvents[i] };
+		frame.impacts.push_back({ { hit.point.x, hit.point.y, hit.point.z }, hit.approachSpeed });
+	}
+}
 }
 
 namespace core::physics {
@@ -362,6 +373,7 @@ void setup(entt::registry& registry) {
 	def.gravity = { .x = 0.0f, .y = -25.0f, .z = 0.0f };
 	b3WorldId id{ b3CreateWorld(&def) };
 	registry.ctx().emplace<World>(id);
+	registry.ctx().emplace<FrameEvents>();
 }
 
 void update(entt::registry& registry, float fixedTimeStep) {
@@ -371,6 +383,7 @@ void update(entt::registry& registry, float fixedTimeStep) {
 	updatePlayerControllers(registry, fixedTimeStep, worldId);
 	updateBall(registry);
 	b3World_Step(worldId, fixedTimeStep, 4);
+	collectImpacts(registry, worldId);
 	updateTransforms(registry);
 }
 }

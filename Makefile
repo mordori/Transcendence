@@ -18,8 +18,9 @@ all: build run
 
 build:
 	@emcmake cmake -S game -B game/build -G Ninja -DCMAKE_EXPORT_COMPILE_COMMANDS=1
-	@ln -sf game/build/compile_commands.json game/compile_commands.json
+	@ln -sf build/compile_commands.json game/compile_commands.json
 	@cmake --build game/build $(PROC)
+
 
 run:
 	@docker compose up -d --build
