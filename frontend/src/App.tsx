@@ -15,10 +15,11 @@ export default function App() {
             if (!canvas) return;
 
             console.log("Downloading assets...");
-            const [shaderRes, modelRes, modelRes2, modelRes3, modelRes4, audioRes, carBank, carBankStrings] = await Promise.all([
+            const [shaderRes, modelRes, modelRes2, modelRes3, modelRes4, modelRes5, audioRes, carBank, carBankStrings] = await Promise.all([
                 fetch('/assets/shaders/bsdf.wgsl'),
                 fetch('/assets/models/ball.glb'),
-                fetch('/assets/models/cylinder.glb'),
+                fetch('/assets/models/stadium.glb'),
+                fetch('/assets/models/stadium_col.glb'),
                 fetch('/assets/models/car.glb'),
                 fetch('/assets/models/wheel.glb'),
                 fetch('/assets/audio/test.wav'),
@@ -26,7 +27,7 @@ export default function App() {
                 fetch('/assets/banks/Master.strings.bank')
             ]);
 
-            const responses = [shaderRes, modelRes, modelRes2, modelRes3, modelRes4, audioRes, carBank, carBankStrings];
+            const responses = [shaderRes, modelRes, modelRes2, modelRes3, modelRes4, modelRes5, audioRes, carBank, carBankStrings];
             const failed = responses.filter(r => !r.ok);
             if (failed.length > 0) {
                 console.error("Failed to fetch assets:", failed.map(r => `${r.status} ${r.url}`));
@@ -38,6 +39,8 @@ export default function App() {
             const modelBuffer2 = await modelRes2.arrayBuffer();
             const modelBuffer3 = await modelRes3.arrayBuffer();
             const modelBuffer4 = await modelRes4.arrayBuffer();
+            const modelBuffer5 = await modelRes5.arrayBuffer();
+
             const audioBuf = await audioRes.arrayBuffer();
             const carBankBuf = await carBank.arrayBuffer();
             const carBankStringBuf = await carBankStrings.arrayBuffer();
@@ -62,9 +65,12 @@ export default function App() {
                     try {
                         Module.FS.writeFile('/shaders/bsdf.wgsl', shaderText);
                         Module.FS.writeFile('/models/ball.glb', new Uint8Array(modelBuffer));
-                        Module.FS.writeFile('/models/cylinder.glb', new Uint8Array(modelBuffer2));
-                        Module.FS.writeFile('/models/car.glb', new Uint8Array(modelBuffer3));
-                        Module.FS.writeFile('/models/wheel.glb', new Uint8Array(modelBuffer4));
+                        Module.FS.writeFile('/models/stadium.glb', new Uint8Array(modelBuffer2));
+                        Module.FS.writeFile('/models/stadium_col.glb', new Uint8Array(modelBuffer3));
+                        Module.FS.writeFile('/models/car.glb', new Uint8Array(modelBuffer4));
+                        Module.FS.writeFile('/models/wheel.glb', new Uint8Array(modelBuffer5));
+
+                        // Audio
                         Module.FS.writeFile('/audio/test.wav', new Uint8Array(audioBuf));
                         Module.FS.writeFile('/banks/Master.bank', new Uint8Array(carBankBuf));
                         Module.FS.writeFile('/banks/Master.strings.bank', new Uint8Array(carBankStringBuf));

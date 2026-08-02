@@ -128,10 +128,14 @@ int main() {
 		clientState->registry.emplace<Renderable>(controller.wheelRL, std::move(renderableRRWheel));
 		clientState->registry.emplace<Renderable>(controller.wheelRR, std::move(renderableRLWheel));
 
-		auto meshStadium = client::renderer::loadMesh("/models/cylinder.glb");
-		auto stadium = core::spawn::stadium(clientState->registry, worldId, meshStadium.value());
+		auto meshStadiumCol = client::renderer::loadMesh("/models/stadium_col.glb");
+		core::spawn::stadium(clientState->registry, worldId, meshStadiumCol.value(), COL_STADIUM_PLAYER, COL_PLAYER);
+
+		auto meshStadium = client::renderer::loadMesh("/models/stadium.glb");
+		auto stadiumBall =
+			core::spawn::stadium(clientState->registry, worldId, meshStadium.value(), COL_STADIUM_BALL, COL_BALL);
 		auto renderableStadium = client::renderer::createRenderable(meshStadium.value());
-		clientState->registry.emplace<Renderable>(stadium, std::move(renderableStadium));
+		clientState->registry.emplace<Renderable>(stadiumBall, std::move(renderableStadium));
 
 		auto meshBall = client::renderer::loadMesh("/models/ball.glb");
 		auto ball = core::spawn::ball(clientState->registry, worldId);

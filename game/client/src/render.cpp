@@ -306,7 +306,7 @@ void render(entt::registry& registry, float deltaTime, float alpha) {
 		cameraPos = visualPos + up + offset;
 	}
 
-	glm::mat4 proj = glm::perspective(glm::radians(75.0f), ctx.aspect, 0.1f, 100.0f);
+	glm::mat4 proj = glm::perspectiveZO(glm::radians(75.0f), ctx.aspect, 0.2f, 1000.0f);
 	glm::mat4 view = glm::lookAt(cameraPos, targetPos, glm::vec3(0.0f, 1.0f, 0.0f));
 	glm::mat4 vp = proj * view;
 
@@ -327,7 +327,7 @@ void render(entt::registry& registry, float deltaTime, float alpha) {
 		ctx.queue.WriteBuffer(renderable.uniformBuffer, 0, &mvp, sizeof(glm::mat4));
 		pass.SetBindGroup(0, renderable.bindGroup);
 		pass.SetVertexBuffer(0, renderable.vertexBuffer);
-		pass.SetIndexBuffer(renderable.indexBuffer, wgpu::IndexFormat::Uint16, 0);
+		pass.SetIndexBuffer(renderable.indexBuffer, wgpu::IndexFormat::Uint32, 0);
 
 		pass.DrawIndexed(renderable.indexCount);
 	}
