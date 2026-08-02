@@ -103,6 +103,7 @@ int main() {
 
 	auto player{ core::spawn::player(clientState->registry, worldId) };
 	clientState->registry.emplace<PlayerTag>(player);
+	client::audio::attachEngine(clientState->registry, player);
 
 	client::input::setup(clientState->registry, player);
 

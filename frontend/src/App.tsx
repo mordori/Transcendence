@@ -15,16 +15,18 @@ export default function App() {
             if (!canvas) return;
 
             console.log("Downloading assets...");
-            const [shaderRes, modelRes, modelRes2, modelRes3, modelRes4, audioRes] = await Promise.all([
+            const [shaderRes, modelRes, modelRes2, modelRes3, modelRes4, audioRes, carBank, carBankStrings] = await Promise.all([
                 fetch('/assets/shaders/bsdf.wgsl'),
                 fetch('/assets/models/ball.glb'),
                 fetch('/assets/models/cylinder.glb'),
                 fetch('/assets/models/car.glb'),
                 fetch('/assets/models/wheel.glb'),
-                fetch('/assets/audio/test.wav')
+                fetch('/assets/audio/test.wav'),
+                fetch('/assets/banks/Master.bank'),
+                fetch('/assets/banks/Master.strings.bank')
             ]);
 
-            const responses = [shaderRes, modelRes, modelRes2, modelRes3, modelRes4, audioRes];
+            const responses = [shaderRes, modelRes, modelRes2, modelRes3, modelRes4, audioRes, carBank, carBankStrings];
             const failed = responses.filter(r => !r.ok);
             if (failed.length > 0) {
                 console.error("Failed to fetch assets:", failed.map(r => `${r.status} ${r.url}`));
@@ -37,6 +39,8 @@ export default function App() {
             const modelBuffer3 = await modelRes3.arrayBuffer();
             const modelBuffer4 = await modelRes4.arrayBuffer();
             const audioBuf = await audioRes.arrayBuffer();
+            const carBankBuf = await carBank.arrayBuffer();
+            const carBankStringBuf = await carBankStrings.arrayBuffer();
 
             console.log("Booting C++ Engine...");
             await createEngine({
@@ -47,6 +51,7 @@ export default function App() {
                         Module.FS.mkdir('/shaders');
                         Module.FS.mkdir('/models');
                         Module.FS.mkdir('/audio');
+                        Module.FS.mkdir('/banks');
                     } catch (e: any) {
                         if (e.code !== 'EEXIST') {
                             console.warn("FS.mkdir error:", e);
@@ -61,6 +66,8 @@ export default function App() {
                         Module.FS.writeFile('/models/car.glb', new Uint8Array(modelBuffer3));
                         Module.FS.writeFile('/models/wheel.glb', new Uint8Array(modelBuffer4));
                         Module.FS.writeFile('/audio/test.wav', new Uint8Array(audioBuf));
+                        Module.FS.writeFile('/banks/Master.bank', new Uint8Array(carBankBuf));
+                        Module.FS.writeFile('/banks/Master.strings.bank', new Uint8Array(carBankStringBuf));
                         console.log("Assets successfully injected.");
                     } catch (e) {
                         console.error("Failed to write assets:", e);

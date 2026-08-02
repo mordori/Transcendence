@@ -5,11 +5,16 @@
 #include <iostream>
 
 #include "components/events.hpp"
+#include "components/physics.hpp"
 #include "fmod_errors.h"
+#include "glm/geometric.hpp"
 
 namespace client::audio {
 
 namespace {
+
+// parameter reaches 1.0
+constexpr float kMaxSpeed{ 40.0f };
 
 bool fmodCheck(FMOD_RESULT result, const char* what) {
 	if (result == FMOD_OK)
@@ -18,6 +23,19 @@ bool fmodCheck(FMOD_RESULT result, const char* what) {
 	std::cerr << "[FMOD] " << what << " failed: " << FMOD_ErrorString(result) << '\n';
 	return false;
 }
+
+void loadBanks(AudioContext& audio) {
+	FMOD::Studio::Bank* bank{ nullptr };
+
+	fmodCheck(audio.system->loadBankFile("/banks/Master.strings.bank",
+				FMOD_STUDIO_LOAD_BANK_NORMAL, &bank),
+		"loadBankFile(Master.strings.bank)");
+
+	fmodCheck(audio.system->loadBankFile("/banks/Master.bank",
+				FMOD_STUDIO_LOAD_BANK_NORMAL, &bank),
+		"loadBankFile(Master.bank)");
+}
+
 }
 
 void setup(entt::registry& registry) {
@@ -33,7 +51,6 @@ void setup(entt::registry& registry) {
 		return;
 	}
 
-	// The context owns everything that has to outlive setup.
 	auto& audio{ registry.ctx().emplace<AudioContext>() };
 	audio.system = system;
 	system->getCoreSystem(&audio.core);
@@ -41,7 +58,26 @@ void setup(entt::registry& registry) {
 	fmodCheck(audio.core->createSound("/audio/test.wav", FMOD_DEFAULT, nullptr, &audio.hitSound),
 		"createSound");
 
+	loadBanks(audio);
+
 	std::cout << "[FMOD] initialized\n";
+}
+
+void attachEngine(entt::registry& registry, entt::entity entity) {
+	auto* audio{ registry.ctx().find<AudioContext>() };
+	if (!audio || !audio->system)
+		return;
+
+	FMOD::Studio::EventDescription* description{ nullptr };
+	if (!fmodCheck(audio->system->getEvent("event:/engine", &description), "getEvent(engine)"))
+		return;
+
+	FMOD::Studio::EventInstance* instance{ nullptr };
+	if (!fmodCheck(description->createInstance(&instance), "createInstance(car/engine)"))
+		return;
+
+	instance->start();
+	registry.emplace_or_replace<AudioEmitter>(entity, instance);
 }
 
 void update(entt::registry& registry, float deltaTime) {
@@ -63,6 +99,15 @@ void update(entt::registry& registry, float deltaTime) {
 
 	if (frame)
 		frame->impacts.clear();
+
+	auto engineView = registry.view<const PlayerController, const AudioEmitter>();
+	for (auto [entity, player, emitter] : engineView.each()) {
+		if (!emitter.loop)
+			continue;
+
+		float speed{ glm::length(player.velocity) };
+		emitter.loop->setParameterByName("speed", std::clamp(speed / kMaxSpeed, 0.0f, 1.0f));
+	}
 
 	if (audio && audio->system)
 		audio->system->update();

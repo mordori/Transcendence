@@ -7,5 +7,8 @@
 namespace client::audio {
 
 void setup(entt::registry& registry);
+
+void attachEngine(entt::registry& registry, entt::entity entity);
+
 void update(entt::registry& registry, float deltaTime);
 }
