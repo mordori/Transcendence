@@ -27,7 +27,7 @@ std::string buildSnapshot(entt::registry& registry, uint32_t currentTick) {
 	}
 
 	auto ballView = registry.view<BallTag, NetworkId, Transform>();
-	for (auto [entity, netId, transform] : ballView.each()) {
+	for (auto [entity, tag, netId, transform] : ballView.each()) {
 		snapshot.balls.push_back({ //
 			.id = netId.id,
 			.pos = transform.pos,

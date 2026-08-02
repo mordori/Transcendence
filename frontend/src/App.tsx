@@ -15,10 +15,11 @@ export default function App() {
             if (!canvas) return;
 
             console.log("Downloading assets...");
-            const [shaderRes, modelRes, modelRes2, modelRes3, modelRes4] = await Promise.all([
+            const [shaderRes, modelRes, modelRes2, modelRes3, modelRes4, modelRes5] = await Promise.all([
                 fetch('/assets/shaders/bsdf.wgsl'),
                 fetch('/assets/models/ball.glb'),
-                fetch('/assets/models/cylinder.glb'),
+                fetch('/assets/models/stadium.glb'),
+                fetch('/assets/models/stadium_col.glb'),
                 fetch('/assets/models/car.glb'),
                 fetch('/assets/models/wheel.glb')
             ]);
@@ -33,6 +34,7 @@ export default function App() {
             const modelBuffer2 = await modelRes2.arrayBuffer();
             const modelBuffer3 = await modelRes3.arrayBuffer();
             const modelBuffer4 = await modelRes4.arrayBuffer();
+            const modelBuffer5 = await modelRes5.arrayBuffer();
 
             console.log("Booting C++ Engine...");
             await createEngine({
@@ -52,9 +54,10 @@ export default function App() {
                     try {
                         Module.FS.writeFile('/shaders/bsdf.wgsl', shaderText);
                         Module.FS.writeFile('/models/ball.glb', new Uint8Array(modelBuffer));
-                        Module.FS.writeFile('/models/cylinder.glb', new Uint8Array(modelBuffer2));
-                        Module.FS.writeFile('/models/car.glb', new Uint8Array(modelBuffer3));
-                        Module.FS.writeFile('/models/wheel.glb', new Uint8Array(modelBuffer4));
+                        Module.FS.writeFile('/models/stadium.glb', new Uint8Array(modelBuffer2));
+                        Module.FS.writeFile('/models/stadium_col.glb', new Uint8Array(modelBuffer3));
+                        Module.FS.writeFile('/models/car.glb', new Uint8Array(modelBuffer4));
+                        Module.FS.writeFile('/models/wheel.glb', new Uint8Array(modelBuffer5));
                         console.log("Assets successfully injected.");
                     } catch (e) {
                         console.error("Failed to write assets:", e);
