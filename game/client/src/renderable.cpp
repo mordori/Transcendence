@@ -47,7 +47,7 @@ Renderable createRenderable(const MeshData& mesh) {
 
 	wgpu::BufferDescriptor ibo{};
 	ibo.usage = wgpu::BufferUsage::Index | wgpu::BufferUsage::CopyDst;
-	ibo.size = sizeof(float) * mesh.indices.size();
+	ibo.size = sizeof(uint32_t) * mesh.indices.size();
 	r.indexBuffer = ctx.device.CreateBuffer(&ibo);
 	ctx.queue.WriteBuffer(r.indexBuffer, 0, mesh.indices.data(), ibo.size);
 
@@ -123,7 +123,7 @@ std::optional<MeshData> loadMesh(const std::string& filepath) {
 		}
 
 		for (cgltf_size i{}; i < prim->indices->count; ++i)
-			mesh.indices.push_back(static_cast<uint16_t>(cgltf_accessor_read_index(prim->indices, i)));
+			mesh.indices.push_back(static_cast<uint32_t>(cgltf_accessor_read_index(prim->indices, i)));
 	}
 
 	cgltf_free(data);

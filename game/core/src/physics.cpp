@@ -3,6 +3,7 @@
 #include <algorithm>
 #include <cmath>
 #include <cstdlib>
+#include <random>
 
 #include "box3d/box3d.h"
 #include "box3d/id.h"
@@ -60,8 +61,11 @@ void updatePlayerControllers(entt::registry& registry, float fixedTimeStep, b3Wo
 		player.steeringAngle = glm::mix(player.steeringAngle, targetSteering, steerSpeed * fixedTimeStep);
 
 		b3Vec3 rayOrigin = { .x = bodyPos.x, .y = bodyPos.y, .z = bodyPos.z };
-		b3Vec3 rayTranslation = { .x = down.x * 0.75f, .y = down.y * 0.75f, .z = down.z * 0.75f };
+		float rayLen = 0.75f;
+		b3Vec3 rayTranslation = { .x = down.x * rayLen, .y = down.y * rayLen, .z = down.z * rayLen };
 		b3QueryFilter filter = { b3DefaultQueryFilter() };
+		filter.categoryBits = COL_PLAYER;
+		filter.maskBits = COL_STADIUM_PLAYER;
 		b3RayResult hit = { b3World_CastRayClosest(worldId, rayOrigin, rayTranslation, filter) };
 
 		if (!hit.hit) {
@@ -72,9 +76,9 @@ void updatePlayerControllers(entt::registry& registry, float fixedTimeStep, b3Wo
 
 		player.isGrounded = hit.hit;
 		glm::vec3 targetNormal = globalUp;
-
+		glm::vec3 surfaceNormal{};
 		if (player.isGrounded) {
-			glm::vec3 surfaceNormal = glm::normalize(glm::vec3{ hit.normal.x, hit.normal.y, hit.normal.z });
+			surfaceNormal = glm::normalize(glm::vec3{ hit.normal.x, hit.normal.y, hit.normal.z });
 			float dotSurface = glm::dot(player.up, surfaceNormal);
 			if (dotSurface < 0.0f) {
 				if (dotSurface < 0.9f)
@@ -96,7 +100,7 @@ void updatePlayerControllers(entt::registry& registry, float fixedTimeStep, b3Wo
 			}
 
 			if (input.jump && dotSurface >= -0.25f) {
-				float jumpSpeed{ 18.0f * mass };
+				float jumpSpeed{ 16.0f * mass };
 				b3Vec3 jumpImpulse{ //
 					.x = player.up.x * jumpSpeed,
 					.y = player.up.y * jumpSpeed,
@@ -152,7 +156,7 @@ void updatePlayerControllers(entt::registry& registry, float fixedTimeStep, b3Wo
 		};
 
 		float moveSpeed{};
-		moveSpeed = (glm::dot(player.up, targetNormal) < 0.9f) ? 4.0f : 30.0f;
+		moveSpeed = (glm::dot(player.up, targetNormal) < 0.8f) ? 20.0f : 30.0f;
 		if (!player.isGrounded)
 			moveSpeed = std::min(moveSpeed, 20.0f);
 		if (move < 0.0f)
@@ -190,15 +194,15 @@ void updatePlayerControllers(entt::registry& registry, float fixedTimeStep, b3Wo
 			};
 			b3Body_ApplyLinearImpulseToCenter(rb.id, scrubImpulse, true);
 
-			if (glm::dot(player.up, globalUp) > 0.0f) {
-				float downPull{ std::abs(forwardSpeed * 1.5f * mass) };
-				b3Vec3 downForce{ //
-					.x = down.x * downPull,
-					.y = down.y * downPull,
-					.z = down.z * downPull
-				};
-				b3Body_ApplyForceToCenter(rb.id, downForce, true);
-			}
+			// if (glm::dot(player.up, globalUp) > -0.5f) {
+			// 	float downPull{ std::abs(forwardSpeed * 0.0f * mass) };
+			// 	b3Vec3 downForce{ //
+			// 		.x = -surfaceNormal.x * downPull,
+			// 		.y = -surfaceNormal.y * downPull,
+			// 		.z = -surfaceNormal.z * downPull
+			// 	};
+			// 	b3Body_ApplyForceToCenter(rb.id, downForce, true);
+			// }
 		}
 
 		player.velocity = core::physics::b3ToGlm(b3Body_GetLinearVelocity(rb.id));
@@ -207,7 +211,7 @@ void updatePlayerControllers(entt::registry& registry, float fixedTimeStep, b3Wo
 
 void updateBall(entt::registry& registry) {
 	auto inputView = registry.view<BallTag, RigidBody, Transform>();
-	for (auto [entity, rb, transform] : inputView.each()) {
+	for (auto [entity, tag, rb, transform] : inputView.each()) {
 		float mass{ b3Body_GetMass(rb.id) };
 		b3Vec3 b3velocity{ b3Body_GetLinearVelocity(rb.id) };
 		glm::vec3 velocity{ glm::vec3{ b3velocity.x, b3velocity.y, b3velocity.z } };
@@ -221,6 +225,58 @@ void updateBall(entt::registry& registry) {
 			};
 			b3Body_ApplyForceToCenter(rb.id, fallForce, true);
 		}
+
+		static std::mt19937 mt{ std::random_device{}() };
+		std::uniform_real_distribution<float> randomX{ -0.07f, 0.07f };
+		float goalDistance{ 54.5f };
+
+		if (transform.pos.z > goalDistance || transform.pos.z < -goalDistance) {
+			auto playerView = registry.view<PlayerTag, RigidBody, Transform>();
+			for (auto [entity, rbPlayer, tPlayer] : playerView.each()) {
+				glm::vec3 ballToPlayer{ tPlayer.pos - transform.pos };
+				ballToPlayer.y = 0.0f;
+				float distance{ glm::length(ballToPlayer) };
+
+				if (distance < 75.0f && distance > 0.001f) {
+					b3Body_SetLinearVelocity(rbPlayer.id, b3Vec3_zero);
+
+					glm::vec3 dir{ glm::normalize(ballToPlayer) };
+					dir.y =
+						1.5f * std::clamp(1.0f - std::clamp(((tPlayer.pos.y - 0.5f) / 10.0f), 0.0f, 1.0f), 0.0f, 1.0f);
+					dir.z += (glm::sign(dir.z) * glm::abs(tPlayer.pos.x) / 40.0f * 5.0f) + (glm::sign(dir.z) * 0.5f);
+					dir.z = std::min(dir.z, dir.y);
+					dir = glm::normalize(dir);
+					b3Vec3 goalImpulse{ //
+						.x = dir.x,
+						.y = dir.y,
+						.z = dir.z
+					};
+					goalImpulse *= ((std::clamp(1.0f - (distance / 75.0f), 0.0f, 1.0f) * 0.6f) + 0.4f) * 50.0f *
+						b3Body_GetMass(rbPlayer.id);
+					b3Body_ApplyLinearImpulseToCenter(rbPlayer.id, goalImpulse, true);
+				}
+			}
+			b3Body_SetLinearVelocity(rb.id, b3Vec3_zero);
+			tag.hasExploded = true;
+		}
+		if (transform.pos.z > goalDistance) {
+			b3Vec3 goalImpulse{ //
+				.x = randomX(mt),
+				.y = 0.07f,
+				.z = -0.09f
+			};
+			b3Body_ApplyLinearImpulseToCenter(rb.id, goalImpulse, true);
+		} else if (transform.pos.z < -goalDistance) {
+			b3Vec3 goalImpulse{ //
+				.x = randomX(mt),
+				.y = 0.07f,
+				.z = 0.09f
+			};
+			b3Body_ApplyLinearImpulseToCenter(rb.id, goalImpulse, true);
+		}
+
+		if (transform.pos.z < 50.0f && transform.pos.z > -50.0f)
+			tag.hasExploded = false;
 	}
 }
 

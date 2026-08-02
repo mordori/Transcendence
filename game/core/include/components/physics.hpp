@@ -11,7 +11,18 @@
 #include "glm/gtc/quaternion.hpp"
 
 struct PlayerTag {};
-struct BallTag {};
+struct BallTag {
+	bool hasExploded{};
+};
+
+enum Category : uint32_t {
+	COL_NONE = 0,
+	COL_PLAYER = 1 << 0,
+	COL_BALL = 1 << 1,
+	COL_STADIUM_PLAYER = 1 << 2,
+	COL_STADIUM_BALL = 1 << 3,
+	COL_ALL = ~0u,
+};
 
 struct PlayerController {
 	glm::vec3 up{ 0.0f, 1.0f, 0.0f };
@@ -45,5 +56,5 @@ struct RigidBody {
 
 struct MeshData {
 	std::vector<float> vertices;
-	std::vector<uint16_t> indices;
+	std::vector<uint32_t> indices;
 };

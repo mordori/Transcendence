@@ -31,7 +31,8 @@ void ground(b3WorldId worldId) {
 	b3CreateHullShape(bodyId, &shapeDef, &boxHull.base);
 }
 
-entt::entity stadium(entt::registry& registry, b3WorldId worldId, const MeshData& meshData) {
+entt::entity stadium(
+	entt::registry& registry, b3WorldId worldId, const MeshData& meshData, uint32_t category, uint32_t mask) {
 	auto stadium = registry.create();
 
 	b3BodyDef bodyDef{ b3DefaultBodyDef() };
@@ -41,6 +42,8 @@ entt::entity stadium(entt::registry& registry, b3WorldId worldId, const MeshData
 
 	b3ShapeDef shapeDef{ b3DefaultShapeDef() };
 	shapeDef.baseMaterial.friction = 0.1f;
+	shapeDef.filter.categoryBits = category;
+	shapeDef.filter.maskBits = mask;
 
 	std::vector<b3Vec3> b3Vertices;
 	b3Vertices.reserve(meshData.vertices.size() / 6);
@@ -85,13 +88,15 @@ entt::entity ball(entt::registry& registry, b3WorldId worldId) {
 
 	b3BodyDef bodyDef{ b3DefaultBodyDef() };
 	bodyDef.type = b3_dynamicBody;
-	bodyDef.gravityScale = 0.25f;
+	bodyDef.gravityScale = 0.35f;
 	bodyDef.angularDamping = 0.5f;
 	bodyDef.linearDamping = 0.3f;
 	bodyDef.position = { .x = t.pos.x, .y = t.pos.y, .z = t.pos.z };
 
 	b3BodyId bodyId{ b3CreateBody(worldId, &bodyDef) };
 	b3ShapeDef shapeDef{ b3DefaultShapeDef() };
+	shapeDef.filter.categoryBits = COL_BALL;
+	shapeDef.filter.maskBits = COL_PLAYER | COL_STADIUM_BALL;
 	shapeDef.density = 0.0001f;
 	shapeDef.baseMaterial.friction = 0.1f;
 	shapeDef.baseMaterial.restitution = 0.5f;
@@ -152,12 +157,28 @@ entt::entity player(entt::registry& registry, b3WorldId worldId) {
 
 	b3BodyId bodyId{ b3CreateBody(worldId, &bodyDef) };
 	b3ShapeDef shapeDef{ b3DefaultShapeDef() };
+	shapeDef.filter.categoryBits = COL_PLAYER;
+	shapeDef.filter.maskBits = COL_STADIUM_PLAYER;
 	shapeDef.density = 10.0f;
 	shapeDef.baseMaterial.friction = 0.0f;
 	shapeDef.baseMaterial.restitution = 0.0f;
 
 	b3Sphere sphere{ .center = b3Vec3_zero, .radius = 0.5f };
 	b3CreateSphereShape(bodyId, &shapeDef, &sphere);
+
+	b3ShapeDef shapeDefBumper{ b3DefaultShapeDef() };
+	shapeDefBumper.filter.categoryBits = COL_PLAYER;
+	shapeDefBumper.filter.maskBits = COL_BALL;
+	shapeDefBumper.density = 0.0f;
+	shapeDefBumper.baseMaterial.friction = 0.1f;
+	shapeDefBumper.baseMaterial.restitution = 0.4f;
+
+	b3Transform bumberOffset{};
+	bumberOffset.p = { .x = 0.0f, .y = -0.183f, .z = 0.22f };
+	bumberOffset.q = { .v = { .x = 0.0f, .y = 0.0f, .z = 0.0f }, .s = 1.0f };
+
+	b3BoxHull bumber{ b3MakeTransformedBoxHull(0.5f, 0.75f, 1.0f, bumberOffset) };
+	b3CreateHullShape(bodyId, &shapeDefBumper, &bumber.base);
 
 	registry.emplace<RigidBody>(player, bodyId);
 	return player;
