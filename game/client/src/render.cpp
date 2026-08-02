@@ -95,10 +95,6 @@ void initWebGPU(std::function<void(bool success)> initStatus) {
 
 	wgpu::RequestAdapterOptions adapterOpts{};
 	adapterOpts.compatibleSurface = ctx.surface;
-	// Chromium's Vulkan swapchain import does not account for the NVIDIA driver's
-	// tiled image padding, so the canvas texture fails to import every frame on
-	// hybrid laptops. Mesa has no such requirement, so prefer the integrated GPU.
-	adapterOpts.powerPreference = wgpu::PowerPreference::LowPower;
 
 	ctx.instance.RequestAdapter(  //
 		&adapterOpts,
