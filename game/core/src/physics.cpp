@@ -156,13 +156,13 @@ void updatePlayerControllers(entt::registry& registry, float fixedTimeStep, b3Wo
 		else
 			right = glm::normalize(right);
 
-		glm::vec3 trueForward{ glm::normalize(glm::cross(player.up, right)) };
-		glm::mat3 matRot{ right, player.up, -trueForward };
+		glm::vec3 forward{ glm::normalize(glm::cross(player.up, right)) };
+		glm::mat3 matRot{ right, player.up, -forward };
 		transform.rot = glm::quat_cast(matRot);
 		b3Vec3 b3forward{ //
-			.x = trueForward.x,
-			.y = trueForward.y,
-			.z = trueForward.z
+			.x = forward.x,
+			.y = forward.y,
+			.z = forward.z
 		};
 
 		float moveSpeed{};
@@ -180,8 +180,6 @@ void updatePlayerControllers(entt::registry& registry, float fixedTimeStep, b3Wo
 
 		if (moveForce.x != 0.0f || moveForce.y != 0.0f || moveForce.z != 0.0f)
 			b3Body_ApplyForceToCenter(rb.id, moveForce, true);
-
-		glm::vec3 forward{ b3forward.x, b3forward.y, b3forward.z };
 
 		if (player.isGrounded) {
 			float rightSpeed{ glm::dot(velocity, right) };
@@ -248,6 +246,20 @@ void updateBall(entt::registry& registry) {
 			tag.hasScored = false;
 		if (tag.hasScored)
 			continue;
+
+		bool isNearGoal{ transform.pos.z > core::rules::goalDistance - 4.5f ||
+			transform.pos.z < -core::rules::goalDistance + 4.5f };
+		if (isNearGoal) {
+			glm::vec3 dir{ glm::normalize(velocity) };
+			dir.z += glm::sign(transform.pos.z);
+			dir = glm::normalize(dir);
+			b3Vec3 nearGoalForce{ //
+				.x = dir.x,
+				.y = dir.y,
+				.z = dir.z
+			};
+			b3Body_ApplyForceToCenter(rb.id, nearGoalForce * 0.01f, true);
+		}
 
 		bool isGoal{ transform.pos.z > core::rules::goalDistance || transform.pos.z < -core::rules::goalDistance };
 		if (!isGoal)

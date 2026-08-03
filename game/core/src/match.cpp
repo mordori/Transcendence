@@ -152,4 +152,10 @@ void update(entt::registry& registry, float fixedTimeStep) {
 			break;
 	}
 }
+
+bool isInsideGoal(const glm::vec3& ballPos, const core::rules::Goal& goal) {
+	if (goal.center.z < 0.0f)
+		return ballPos.z < -core::rules::goalDistance;
+	return ballPos.z > core::rules::goalDistance;
+}
 }

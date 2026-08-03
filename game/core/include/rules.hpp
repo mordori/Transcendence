@@ -14,13 +14,11 @@ struct Goal {
 };
 
 constexpr Goal goals[2]{
-	{ .center = { 0.0f, 2.0f, 54.5f }, .halfExtents = { 8.0f, 3.0f, 2.0f }, .team = 0 },
-	{ .center = { 0.0f, 2.0f, -54.5f }, .halfExtents = { 8.0f, 3.0f, 2.0f }, .team = 1 },
+	{ .center = { 0.0f, 3.85f, 60.0f }, .halfExtents = { 9.9f, 3.85f, 6.0f }, .team = 0 },
+	{ .center = { 0.0f, 3.85f, -60.0f }, .halfExtents = { 9.9f, 3.85f, 6.0f }, .team = 1 },
 };
 
-bool isInsideGoal(const glm::vec3& ballPos, const Goal& goal);
-
-constexpr glm::vec3 arenaHalfExtents{ 40.0f, 20.0f, 54.5f };
+constexpr glm::vec3 arenaHalfExtents{ 40.0f, 8.9f, 54.0f };
 
 // clang-format off
 constexpr glm::vec3 playerSpawnPoints[6]{
@@ -29,7 +27,7 @@ constexpr glm::vec3 playerSpawnPoints[6]{
 // clang-format on
 
 constexpr glm::vec3 ballSpawnPoint{ 0.0f, 2.0f, 0.0f };
-constexpr float goalDistance{ 54.5f };
+constexpr float goalDistance{ 58.0f };
 
 constexpr float startDuration{ 3.0f };
 constexpr float matchDuration{ 60.0f };
