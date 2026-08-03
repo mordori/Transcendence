@@ -20,9 +20,22 @@ EM_BOOL mouseCallback(int eventType, const EmscriptenMouseEvent* e, void* userDa
 	auto player{ registry->ctx().get<client::input::LocalPlayerCtx>().id };
 	auto& controller{ registry->get<PlayerController>(player) };
 
-	if (eventType == EMSCRIPTEN_EVENT_MOUSEDOWN)
-		emscripten_request_pointerlock("#engine-canvas", true);
-	else if (eventType == EMSCRIPTEN_EVENT_MOUSEMOVE) {
+	if (eventType == EMSCRIPTEN_EVENT_MOUSEDOWN) {
+		// clang-format off
+		EM_ASM({
+			const canvas = document.getElementById('engine-canvas');
+			if (canvas) {
+				canvas.focus();
+				if (document.hasFocus()) {
+					const lockPromise = canvas.requestPointerLock();
+					if (lockPromise !== undefined) {
+						lockPromise.catch(err => { console.warn("Pointer lock deferred: document gaining focus."); });
+					}
+				}
+			}
+		});
+		// clang-format on
+	} else if (eventType == EMSCRIPTEN_EVENT_MOUSEMOVE) {
 		EmscriptenPointerlockChangeEvent plState{};
 		emscripten_get_pointerlock_status(&plState);
 
@@ -86,8 +99,8 @@ void setup(entt::registry& registry, entt::entity player) {
 	emscripten_set_keydown_callback(EMSCRIPTEN_EVENT_TARGET_WINDOW, &registry, true, keyCallback);
 	emscripten_set_keyup_callback(EMSCRIPTEN_EVENT_TARGET_WINDOW, &registry, true, keyCallback);
 
-	emscripten_set_mousedown_callback(EMSCRIPTEN_EVENT_TARGET_WINDOW, &registry, true, mouseCallback);
-	emscripten_set_mousemove_callback(EMSCRIPTEN_EVENT_TARGET_WINDOW, &registry, true, mouseCallback);
+	emscripten_set_mousedown_callback("#engine-canvas", &registry, true, mouseCallback);
+	emscripten_set_mousemove_callback("#engine-canvas", &registry, true, mouseCallback);
 #endif
 }
 }

@@ -3,7 +3,7 @@ set(TARGET_NAME client)
 add_executable(${TARGET_NAME}
 	src/main.cpp
 	src/input.cpp
-	src/render.cpp
+	src/renderer.cpp
 	src/renderable.cpp
 	src/audio.cpp
 )

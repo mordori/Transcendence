@@ -22,3 +22,8 @@ struct MaterialComponent {
 	uint32_t pipelineID{};
 	wgpu::BindGroup bindGroup{};
 };
+
+struct Camera {
+	float yaw{};
+	float pitch{};
+};

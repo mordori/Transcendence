@@ -2,8 +2,12 @@
 
 #include <cstdint>
 #include <functional>
+#include <optional>
+#include <string>
 #include <unordered_map>
 
+#include "components/physics.hpp"
+#include "components/renderer.hpp"
 #include "entt/entity/fwd.hpp"
 #include "entt/entt.hpp"
 #include "glm/ext/matrix_float4x4.hpp"
@@ -46,6 +50,10 @@ struct RenderContext {
 };
 
 RenderContext& getRenderContext();
-void initWebGPU(std::function<void(bool success)> initStatus);
+void setup(std::function<void(bool success)> onComplete);
 void render(entt::registry& registry, float deltaTime, float alpha);
+
+MeshData createMeshCube();
+std::optional<MeshData> loadMesh(const std::string& filepath);
+Renderable createRenderable(const MeshData& mesh);
 }

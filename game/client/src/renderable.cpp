@@ -1,5 +1,3 @@
-#include "components/renderable.hpp"
-
 #include <array>
 #include <cstdint>
 #include <iostream>
@@ -7,12 +5,13 @@
 #include <string>
 #include <vector>
 
+#include "components/renderer.hpp"
+
 #define CGLTF_IMPLEMENTATION
 #include "cgltf.h"
 #include "components/physics.hpp"
 #include "glm/ext/matrix_float4x4.hpp"
-#include "render.hpp"
-#include "renderable.hpp"
+#include "renderer.hpp"
 #include "webgpu/webgpu_cpp.h"
 
 namespace client::renderer {
@@ -56,7 +55,6 @@ Renderable createRenderable(const MeshData& mesh) {
 
 MeshData createMeshCube() {
 	MeshData mesh{};
-
 	// clang-format off
 	mesh.vertices = {
 		-1, -1,  1,   1, 0, 0,
@@ -68,13 +66,11 @@ MeshData createMeshCube() {
 		 1,  1, -1,   1, 1, 1,
 		-1,  1, -1,   0, 0, 0
 	};
-
 	mesh.indices = {
 		0,1,2, 2,3,0, 1,5,6, 6,2,1, 5,4,7, 7,6,5,
 		4,0,3, 3,7,4, 3,2,6, 6,7,3, 4,5,1, 1,0,4
 	};
 	// clang-format on
-
 	return mesh;
 }
 

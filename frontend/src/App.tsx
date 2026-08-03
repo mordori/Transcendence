@@ -89,7 +89,12 @@ export default function App() {
 
     return (
         <div className="engine-container">
-            <canvas ref={canvasRef} id="engine-canvas" />
+            <canvas
+                ref={canvasRef}
+                id="engine-canvas"
+                tabIndex={0}
+                style={{ outline: "none" }}
+            />
         </div>
     );
 }

@@ -1,4 +1,4 @@
-#include "render.hpp"
+#include "renderer.hpp"
 
 #include <sys/types.h>
 
@@ -13,7 +13,7 @@
 #include <utility>
 
 #include "components/physics.hpp"
-#include "components/renderable.hpp"
+#include "components/renderer.hpp"
 #include "entt/entity/fwd.hpp"
 #include "glm/common.hpp"
 #include "glm/ext/matrix_clip_space.hpp"
@@ -79,11 +79,11 @@ EM_BOOL onWindowResize(int eventType, const EmscriptenUiEvent* uiEvent, void* us
 	return EM_TRUE;
 }
 
-void initWebGPU(std::function<void(bool success)> initStatus) {
+void setup(std::function<void(bool success)> onComplete) {
 	ctx.instance = wgpu::CreateInstance();
 	if (!ctx.instance) {
 		std::cerr << "[WebGPU] Failed to create instance.\n";
-		initStatus(false);
+		onComplete(false);
 		return;
 	}
 
@@ -99,11 +99,11 @@ void initWebGPU(std::function<void(bool success)> initStatus) {
 	ctx.instance.RequestAdapter(  //
 		&adapterOpts,
 		wgpu::CallbackMode::AllowSpontaneous,
-		[initStatus](wgpu::RequestAdapterStatus status, wgpu::Adapter adapter, wgpu::StringView msg) {
+		[onComplete](wgpu::RequestAdapterStatus status, wgpu::Adapter adapter, wgpu::StringView msg) {
 		(void)msg;
 		if (status != wgpu::RequestAdapterStatus::Success) {
 			std::cerr << "[WebGPU] Failed to get adapter.\n";
-			initStatus(false);
+			onComplete(false);
 			return;
 		}
 		ctx.adapter = std::move(adapter);
@@ -112,11 +112,11 @@ void initWebGPU(std::function<void(bool success)> initStatus) {
 		ctx.adapter.RequestDevice(	//
 			&deviceDesc,
 			wgpu::CallbackMode::AllowSpontaneous,
-			[initStatus](wgpu::RequestDeviceStatus status, wgpu::Device device, wgpu::StringView msg) {
+			[onComplete](wgpu::RequestDeviceStatus status, wgpu::Device device, wgpu::StringView msg) {
 			(void)msg;
 			if (status != wgpu::RequestDeviceStatus::Success) {
 				std::cerr << "[WebGPU] Failed to get device.\n";
-				initStatus(false);
+				onComplete(false);
 				return;
 			}
 			ctx.device = std::move(device);
@@ -140,12 +140,12 @@ void initWebGPU(std::function<void(bool success)> initStatus) {
 			resizeSurface();
 
 			if (!CreateRenderPipeline()) {
-				initStatus(false);
+				onComplete(false);
 				return;
 			}
 
 			std::cout << "[WebGPU] Initialized successfully.\n";
-			initStatus(true);
+			onComplete(true);
 		});
 	});
 
@@ -270,32 +270,28 @@ void render(entt::registry& registry, float deltaTime, float alpha) {
 	glm::vec3 cameraPos{ 0.0f, 5.0f, 10.0f };
 	glm::vec3 targetPos{ 0.0f, 0.0f, 0.0f };
 
-	static float smoothYaw{};
-	static float smoothPitch{};
-	static bool firstFrame{ true };
-
-	auto playerView = registry.view<const PlayerTag, const Transform, const PlayerController>();
-	for (auto [entity, transform, player] : playerView.each()) {
-		if (firstFrame) {
-			smoothYaw = player.camYaw;
-			smoothPitch = player.camPitch;
-			firstFrame = false;
+	auto playerView = registry.view<const PlayerTag, const Transform, PlayerController, Camera>();
+	for (auto [entity, transform, player, cam] : playerView.each()) {
+		if (player.camNeedSnap) {
+			cam.yaw = player.camYaw;
+			cam.pitch = player.camPitch;
+			player.camNeedSnap = false;
 		}
 
 		float smoothFactor = std::clamp(15.0f * deltaTime, 0.0f, 1.0f);
-		smoothYaw = glm::mix(smoothYaw, player.camYaw, smoothFactor);
-		smoothPitch = glm::mix(smoothPitch, player.camPitch, smoothFactor);
+		cam.yaw = glm::mix(cam.yaw, player.camYaw, smoothFactor);
+		cam.pitch = glm::mix(cam.pitch, player.camPitch, smoothFactor);
 		glm::vec3 visualPos = glm::mix(transform.prevPos, transform.pos, alpha);
 
 		glm::vec3 up = glm::vec3{ 0.0f, 1.5f, 0.0f };
 		float distance = 4.3f;
-		float horizontal{ distance * std::cos(smoothPitch) };
-		float vertical{ distance * std::sin(smoothPitch) };
+		float horizontal{ distance * std::cos(cam.pitch) };
+		float vertical{ distance * std::sin(cam.pitch) };
 
 		glm::vec3 offset{ //
-			horizontal * std::sin(smoothYaw),
+			horizontal * std::sin(cam.yaw),
 			-vertical,
-			horizontal * std::cos(smoothYaw)
+			horizontal * std::cos(cam.yaw)
 		};
 
 		targetPos = visualPos;

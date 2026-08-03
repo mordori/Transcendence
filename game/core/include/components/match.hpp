@@ -11,5 +11,5 @@ struct Match {
 
 	uint32_t scoreRed{};
 	uint32_t scoreBlue{};
-	uint32_t lastTeamToScore{};
+	int32_t lastTeamToScore{ -1 };
 };

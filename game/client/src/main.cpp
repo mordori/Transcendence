@@ -7,13 +7,13 @@
 #include "box3d/id.h"
 #include "components/audio.hpp"
 #include "components/physics.hpp"
-#include "components/renderable.hpp"
+#include "components/renderer.hpp"
 #include "entt/entity/fwd.hpp"
 #include "entt/entt.hpp"
 #include "input.hpp"
+#include "match.hpp"
 #include "physics.hpp"
-#include "render.hpp"
-#include "renderable.hpp"
+#include "renderer.hpp"
 #include "spawn.hpp"
 
 #ifdef __EMSCRIPTEN__
@@ -35,26 +35,27 @@ struct Client {
 // Stand-alone player version
 void update(void* arg) {
 	auto* state{ static_cast<Client*>(arg) };
-	static auto lastTime{ std::chrono::steady_clock::now() };
-	auto currentTime{ std::chrono::steady_clock::now() };
-
-	float deltaTime{ std::chrono::duration<float>(currentTime - lastTime).count() };
-	deltaTime = std::min(deltaTime, 0.1f);
 	static float smoothDelta{};
-	smoothDelta = (smoothDelta * 0.9f) + (deltaTime * 0.1f);
-	lastTime = currentTime;
 	static float timeAccumulator{};
+	static auto prevTickStart{ std::chrono::steady_clock::now() };
+
+	auto tickStart{ std::chrono::steady_clock::now() };
+	float deltaTime{ std::chrono::duration<float>(tickStart - prevTickStart).count() };
+	deltaTime = std::min(deltaTime, 0.1f);
+	smoothDelta = (smoothDelta * 0.9f) + (deltaTime * 0.1f);
+
+	prevTickStart = tickStart;
 	timeAccumulator += smoothDelta;
 
 	constexpr float fixedTimeStep = 1.0f / 60.0f;
 
 	while (timeAccumulator >= fixedTimeStep) {
 		core::physics::update(state->registry, fixedTimeStep);
+		core::match::update(state->registry, fixedTimeStep);
 		timeAccumulator -= fixedTimeStep;
 	}
 
-	float alpha = timeAccumulator / fixedTimeStep;
-	alpha = std::clamp(alpha, 0.0f, 1.0f);
+	float alpha = std::clamp(timeAccumulator / fixedTimeStep, 0.0f, 1.0f);
 	client::audio::update(state->registry, smoothDelta);
 	client::renderer::render(state->registry, smoothDelta, alpha);
 }
@@ -100,12 +101,14 @@ int main() {
 
 	auto player{ core::spawn::player(_client->registry, worldId) };
 	_client->registry.emplace<PlayerTag>(player);
+	_client->registry.emplace<Camera>(player);
 	client::audio::attachEngine(_client->registry, player);
 
 	client::input::setup(_client->registry, player);
+	core::match::setup(_client->registry);
 
-	// client::renderer::initWebGPU([player, worldId](bool success) {
-	client::renderer::initWebGPU([_client, player, worldId](bool success) {
+	// client::renderer::setup([player, worldId](bool success) {
+	client::renderer::setup([_client, player, worldId](bool success) {
 		if (!success) {
 			std::cerr << "[WebGPU] Initialization failed.\n";
 			emscripten_force_exit(1);
