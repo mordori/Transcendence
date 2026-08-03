@@ -11,6 +11,7 @@
 #include "components/physics.hpp"
 #include "entt/entity/fwd.hpp"
 #include "entt/entt.hpp"
+#include "utils/glaze/glm.hpp"
 
 namespace core::network {
 
