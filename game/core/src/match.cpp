@@ -64,26 +64,26 @@ void reset(entt::registry& registry) {
 
 		if (player.wheelFL != entt::null) {
 			auto& t = registry.get<Transform>(player.wheelFL);
-			t.pos = transform.pos + (transform.rot * offsetFL);
-			t.rot = transform.rot;
+			t.pos = t.prevPos = transform.pos + (transform.rot * offsetFL);
+			t.rot = t.prevRot = transform.rot;
 		}
 
 		if (player.wheelFR != entt::null) {
 			auto& t = registry.get<Transform>(player.wheelFR);
-			t.pos = transform.pos + (transform.rot * offsetFR);
-			t.rot = transform.rot * rot180;
+			t.pos = t.prevPos = transform.pos + (transform.rot * offsetFR);
+			t.rot = t.prevRot = transform.rot * rot180;
 		}
 
 		if (player.wheelRL != entt::null) {
 			auto& t = registry.get<Transform>(player.wheelRL);
-			t.pos = transform.pos + (transform.rot * offsetRL);
-			t.rot = transform.rot;
+			t.pos = t.prevPos = transform.pos + (transform.rot * offsetRL);
+			t.rot = t.prevRot = transform.rot;
 		}
 
 		if (player.wheelRR != entt::null) {
 			auto& t = registry.get<Transform>(player.wheelRR);
-			t.pos = transform.pos + (transform.rot * offsetRR);
-			t.rot = transform.rot * rot180;
+			t.pos = t.prevPos = transform.pos + (transform.rot * offsetRR);
+			t.rot = t.prevRot = transform.rot * rot180;
 		}
 
 		player.up = core::physics::worldUp;

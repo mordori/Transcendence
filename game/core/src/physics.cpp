@@ -271,7 +271,7 @@ void updateBall(entt::registry& registry) {
 			ballToPlayer.y = 0.0f;
 			float distance{ glm::length(ballToPlayer) };
 
-			if (distance < 30.0f && distance > 0.001f) {
+			if (distance < 40.0f && distance > 0.001f) {
 				b3Body_SetLinearVelocity(rbPlayer.id, b3Vec3_zero);
 
 				glm::vec3 dir{ glm::normalize(ballToPlayer) };
