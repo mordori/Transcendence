@@ -17,7 +17,7 @@ namespace {
 
 EM_BOOL mouseCallback(int eventType, const EmscriptenMouseEvent* e, void* userData) {
 	auto* registry{ static_cast<entt::registry*>(userData) };
-	auto player{ registry->ctx().get<client::input::LocalPlayerCtx>().id };
+	auto player{ registry->ctx().get<client::input::LocalPlayer>().id };
 	auto& controller{ registry->get<PlayerController>(player) };
 
 	if (eventType == EMSCRIPTEN_EVENT_MOUSEDOWN) {
@@ -52,7 +52,7 @@ EM_BOOL mouseCallback(int eventType, const EmscriptenMouseEvent* e, void* userDa
 
 EM_BOOL keyCallback(int eventType, const EmscriptenKeyboardEvent* e, void* userData) {
 	auto* registry{ static_cast<entt::registry*>(userData) };
-	auto player{ registry->ctx().get<client::input::LocalPlayerCtx>().id };
+	auto player{ registry->ctx().get<client::input::LocalPlayer>().id };
 	auto& input{ registry->get<InputComponent>(player) };
 
 	bool isDown{ (eventType == EMSCRIPTEN_EVENT_KEYDOWN) };
@@ -93,7 +93,7 @@ EM_BOOL keyCallback(int eventType, const EmscriptenKeyboardEvent* e, void* userD
 namespace client::input {
 
 void setup(entt::registry& registry, entt::entity player) {
-	registry.ctx().emplace<LocalPlayerCtx>(player);
+	registry.ctx().emplace<LocalPlayer>(player);
 
 #ifdef __EMSCRIPTEN__
 	emscripten_set_keydown_callback(EMSCRIPTEN_EVENT_TARGET_WINDOW, &registry, true, keyCallback);

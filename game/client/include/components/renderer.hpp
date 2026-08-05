@@ -2,28 +2,17 @@
 
 #include <cstdint>
 
+#include "glm/ext/matrix_float4x4.hpp"
 #include "webgpu/webgpu_cpp.h"
 
-struct Renderable {
-	wgpu::Buffer vertexBuffer{};
-	wgpu::Buffer indexBuffer{};
-	uint32_t indexCount{};
-	wgpu::Buffer uniformBuffer{};
-	wgpu::BindGroup bindGroup{};
-};
-
-struct MeshComponent {
-	wgpu::Buffer vertexBuffer{};
-	wgpu::Buffer indexBuffer{};
-	uint32_t indexCount{};
-};
-
-struct MaterialComponent {
-	uint32_t pipelineID{};
-	wgpu::BindGroup bindGroup{};
+struct StaticMeshInstance {
+	uint32_t meshId{};
+	uint32_t materialId{};
 };
 
 struct Camera {
+	glm::mat4 viewProj{ 1.0f };
+
 	float yaw{};
 	float pitch{};
 };

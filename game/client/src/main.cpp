@@ -1,11 +1,13 @@
 #include <algorithm>
 #include <chrono>
+#include <cstdint>
 #include <iostream>
 #include <utility>
 
 #include "audio.hpp"
 #include "box3d/id.h"
 #include "components/audio.hpp"
+#include "components/input.hpp"
 #include "components/physics.hpp"
 #include "components/renderer.hpp"
 #include "entt/entity/fwd.hpp"
@@ -57,7 +59,9 @@ void update(void* arg) {
 
 	float alpha = std::clamp(timeAccumulator / fixedTimeStep, 0.0f, 1.0f);
 	client::audio::update(state->registry, smoothDelta);
-	client::renderer::render(state->registry, smoothDelta, alpha);
+	client::renderer::updateCameras(state->registry, smoothDelta, alpha);
+	client::renderer::prepareScene(state->registry, alpha);
+	client::renderer::render(state->registry);
 }
 
 // TODO: Dedicated server version
@@ -100,7 +104,7 @@ int main() {
 	auto worldId{ _client->registry.ctx().get<World>().id };
 
 	auto player{ core::spawn::player(_client->registry, worldId) };
-	_client->registry.emplace<PlayerTag>(player);
+	_client->registry.emplace<InputComponent>(player);
 	_client->registry.emplace<Camera>(player);
 	client::audio::attachEngine(_client->registry, player);
 
@@ -116,33 +120,31 @@ int main() {
 		}
 
 		auto meshPlayer = client::renderer::loadMesh("/models/car.glb");
-		auto renderablePlayer = client::renderer::createRenderable(meshPlayer.value());
-		_client->registry.emplace<Renderable>(player, std::move(renderablePlayer));
+		uint32_t meshIdPlayer = client::renderer::createSharedMesh(meshPlayer.value());
+		_client->registry.emplace<StaticMeshInstance>(player, meshIdPlayer, 0u);
+
+		auto meshWheel = client::renderer::loadMesh("/models/wheel.glb");
+		uint32_t meshIDWheel = client::renderer::createSharedMesh(meshWheel.value());
 
 		auto& controller{ _client->registry.get<PlayerController>(player) };
-		auto meshWheel = client::renderer::loadMesh("/models/wheel.glb");
-		auto renderableFLWheel = client::renderer::createRenderable(meshWheel.value());
-		auto renderableFRWheel = client::renderer::createRenderable(meshWheel.value());
-		auto renderableRRWheel = client::renderer::createRenderable(meshWheel.value());
-		auto renderableRLWheel = client::renderer::createRenderable(meshWheel.value());
-		_client->registry.emplace<Renderable>(controller.wheelFL, std::move(renderableFLWheel));
-		_client->registry.emplace<Renderable>(controller.wheelFR, std::move(renderableFRWheel));
-		_client->registry.emplace<Renderable>(controller.wheelRL, std::move(renderableRRWheel));
-		_client->registry.emplace<Renderable>(controller.wheelRR, std::move(renderableRLWheel));
+		_client->registry.emplace<StaticMeshInstance>(controller.wheelFL, meshIDWheel, 0u);
+		_client->registry.emplace<StaticMeshInstance>(controller.wheelFR, meshIDWheel, 0u);
+		_client->registry.emplace<StaticMeshInstance>(controller.wheelRL, meshIDWheel, 0u);
+		_client->registry.emplace<StaticMeshInstance>(controller.wheelRR, meshIDWheel, 0u);
 
-		auto meshStadiumCol = client::renderer::loadMesh("/models/stadium_col.glb");
-		core::spawn::stadium(_client->registry, worldId, meshStadiumCol.value(), COL_STADIUM_PLAYER, COL_PLAYER);
+		auto meshStadiumPlayer = client::renderer::loadMesh("/models/stadium_col.glb");
+		core::spawn::stadium(_client->registry, worldId, meshStadiumPlayer.value(), COL_STADIUM_PLAYER, COL_PLAYER);
 
-		auto meshStadium = client::renderer::loadMesh("/models/stadium.glb");
+		auto meshStadiumBall = client::renderer::loadMesh("/models/stadium.glb");
 		auto stadiumBall =
-			core::spawn::stadium(_client->registry, worldId, meshStadium.value(), COL_STADIUM_BALL, COL_BALL);
-		auto renderableStadium = client::renderer::createRenderable(meshStadium.value());
-		_client->registry.emplace<Renderable>(stadiumBall, std::move(renderableStadium));
+			core::spawn::stadium(_client->registry, worldId, meshStadiumBall.value(), COL_STADIUM_BALL, COL_BALL);
+		uint32_t meshIdStadiumBall = client::renderer::createSharedMesh(meshStadiumBall.value());
+		_client->registry.emplace<StaticMeshInstance>(stadiumBall, meshIdStadiumBall, 0u);
 
-		auto meshBall = client::renderer::loadMesh("/models/ball.glb");
 		auto ball = core::spawn::ball(_client->registry, worldId);
-		auto renderableBall = client::renderer::createRenderable(meshBall.value());
-		_client->registry.emplace<Renderable>(ball, std::move(renderableBall));
+		auto meshBall = client::renderer::loadMesh("/models/ball.glb");
+		uint32_t meshIdBall = client::renderer::createSharedMesh(meshBall.value());
+		_client->registry.emplace<StaticMeshInstance>(ball, meshIdBall, 0u);
 
 		emscripten_set_main_loop_arg(update, _client, 0, false);
 		// emscripten_set_main_loop(update, 0, false);

@@ -1,11 +1,12 @@
 set(TARGET_NAME client)
 
 add_executable(${TARGET_NAME}
-	src/main.cpp
-	src/input.cpp
-	src/renderer.cpp
-	src/renderable.cpp
 	src/audio.cpp
+	src/input.cpp
+	src/main.cpp
+	src/mesh.cpp
+	src/network.cpp
+	src/renderer.cpp
 )
 
 target_link_libraries(${TARGET_NAME} PRIVATE

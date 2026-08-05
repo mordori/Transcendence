@@ -16,7 +16,7 @@ export default function App() {
 
             console.log("Downloading assets...");
             const [shaderRes, modelRes, modelRes2, modelRes3, modelRes4, modelRes5, audioRes, carBank, carBankStrings] = await Promise.all([
-                fetch('/assets/shaders/bsdf.wgsl'),
+                fetch('/assets/shaders/simple.wgsl'),
                 fetch('/assets/models/ball.glb'),
                 fetch('/assets/models/stadium.glb'),
                 fetch('/assets/models/stadium_col.glb'),
@@ -63,7 +63,7 @@ export default function App() {
 
                     // 2. Write exactly where C++ will look for them
                     try {
-                        Module.FS.writeFile('/shaders/bsdf.wgsl', shaderText);
+                        Module.FS.writeFile('/shaders/simple.wgsl', shaderText);
                         Module.FS.writeFile('/models/ball.glb', new Uint8Array(modelBuffer));
                         Module.FS.writeFile('/models/stadium.glb', new Uint8Array(modelBuffer2));
                         Module.FS.writeFile('/models/stadium_col.glb', new Uint8Array(modelBuffer3));

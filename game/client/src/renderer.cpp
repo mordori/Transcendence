@@ -10,7 +10,9 @@
 #include <iostream>
 #include <optional>
 #include <string>
+#include <unordered_map>
 #include <utility>
+#include <vector>
 
 #include "components/physics.hpp"
 #include "components/renderer.hpp"
@@ -25,6 +27,7 @@
 #include "glm/fwd.hpp"
 #include "glm/gtc/quaternion.hpp"
 #include "glm/trigonometric.hpp"
+#include "input.hpp"
 #include "utils/files.hpp"
 #include "webgpu/webgpu.h"
 #include "webgpu/webgpu_cpp.h"
@@ -153,7 +156,7 @@ void setup(std::function<void(bool success)> onComplete) {
 }
 
 bool CreateRenderPipeline() {
-	std::optional<std::string> wgslSrc = core::utils::loadFile("shaders/bsdf.wgsl");
+	std::optional<std::string> wgslSrc = core::utils::loadFile("shaders/simple.wgsl");
 	if (!wgslSrc.has_value()) {
 		std::cerr << "[WebGPU] Failed to load shader.\n";
 		return false;
@@ -165,22 +168,51 @@ bool CreateRenderPipeline() {
 	shaderDesc.nextInChain = &shaderSrc;
 	wgpu::ShaderModule shader{ ctx.device.CreateShaderModule(&shaderDesc) };
 
-	// BindGroupLayout
-	wgpu::BindGroupLayoutEntry bglEntry{};
-	bglEntry.binding = 0;
-	bglEntry.visibility = wgpu::ShaderStage::Vertex;
-	bglEntry.buffer.type = wgpu::BufferBindingType::Uniform;
-	bglEntry.buffer.minBindingSize = sizeof(glm::mat4);
+	// Group 0
+	wgpu::BindGroupLayoutEntry bglCamera{};
+	bglCamera.binding = 0;
+	bglCamera.visibility = wgpu::ShaderStage::Vertex;
+	bglCamera.buffer.type = wgpu::BufferBindingType::Uniform;
+	bglCamera.buffer.minBindingSize = sizeof(glm::mat4);
 
-	wgpu::BindGroupLayoutDescriptor bglDesc{};
-	bglDesc.entryCount = 1;
-	bglDesc.entries = &bglEntry;
-	ctx.bindGroupLayout = ctx.device.CreateBindGroupLayout(&bglDesc);
+	wgpu::BindGroupLayoutDescriptor bglDescCamera{};
+	bglDescCamera.entryCount = 1;
+	bglDescCamera.entries = &bglCamera;
+	ctx.frameBindGroupLayout = ctx.device.CreateBindGroupLayout(&bglDescCamera);
+
+	// Group 1
+	wgpu::BindGroupLayoutEntry bglInstances{};
+	bglInstances.binding = 0;
+	bglInstances.visibility = wgpu::ShaderStage::Vertex;
+	bglInstances.buffer.type = wgpu::BufferBindingType::ReadOnlyStorage;
+	bglInstances.buffer.minBindingSize = sizeof(glm::mat4);
+
+	wgpu::BindGroupLayoutDescriptor bglDescInstances{};
+	bglDescInstances.entryCount = 1;
+	bglDescInstances.entries = &bglInstances;
+	ctx.meshBindGroupLayout = ctx.device.CreateBindGroupLayout(&bglDescInstances);
+
+	wgpu::BufferDescriptor camBufDesc{};
+	camBufDesc.usage = wgpu::BufferUsage::Uniform | wgpu::BufferUsage::CopyDst;
+	camBufDesc.size = sizeof(glm::mat4);
+	ctx.frameUniformBuffer = ctx.device.CreateBuffer(&camBufDesc);
+
+	wgpu::BindGroupEntry bgCamera{};
+	bgCamera.binding = 0;
+	bgCamera.buffer = ctx.frameUniformBuffer;
+	bgCamera.size = sizeof(glm::mat4);
+
+	wgpu::BindGroupDescriptor bgDesc{};
+	bgDesc.layout = ctx.frameBindGroupLayout;
+	bgDesc.entryCount = 1;
+	bgDesc.entries = &bgCamera;
+	ctx.frameBindGroup = ctx.device.CreateBindGroup(&bgDesc);
 
 	// Pipeline Layout
+	std::array<wgpu::BindGroupLayout, 2> layouts{ ctx.frameBindGroupLayout, ctx.meshBindGroupLayout };
 	wgpu::PipelineLayoutDescriptor layoutDesc{};
-	layoutDesc.bindGroupLayoutCount = 1;
-	layoutDesc.bindGroupLayouts = &ctx.bindGroupLayout;
+	layoutDesc.bindGroupLayoutCount = layouts.size();
+	layoutDesc.bindGroupLayouts = layouts.data();
 	wgpu::PipelineLayout pipeline_layout = ctx.device.CreatePipelineLayout(&layoutDesc);
 
 	// Render Pipeline Construction
@@ -231,47 +263,20 @@ bool CreateRenderPipeline() {
 	pipelineDesc.primitive.topology = wgpu::PrimitiveTopology::TriangleList;
 	pipelineDesc.primitive.cullMode = wgpu::CullMode::Back;
 
-	ctx.pipeline = ctx.device.CreateRenderPipeline(&pipelineDesc);
+	ctx.pipelines[PipelineType::Opaque] = ctx.device.CreateRenderPipeline(&pipelineDesc);
 	return true;
 }
 
-void render(entt::registry& registry, float deltaTime, float alpha) {
+void updateCameras(entt::registry& registry, float deltaTime, float alpha) {
 	if (!ctx.device)
 		return;
 
-	wgpu::SurfaceTexture surfaceTexture;
-	ctx.surface.GetCurrentTexture(&surfaceTexture);
-	if (!surfaceTexture.texture)
-		return;
+	auto localPlayer = registry.ctx().get<client::input::LocalPlayer>().id;
+	if (registry.all_of<Camera, PlayerController, Transform>(localPlayer)) {
+		auto& cam{ registry.get<Camera>(localPlayer) };
+		auto& player{ registry.get<PlayerController>(localPlayer) };
+		auto& transform{ registry.get<Transform>(localPlayer) };
 
-	wgpu::TextureView texView = surfaceTexture.texture.CreateView();
-
-	wgpu::RenderPassColorAttachment colorAttachment{};
-	colorAttachment.view = texView;
-	colorAttachment.loadOp = wgpu::LoadOp::Clear;
-	colorAttachment.storeOp = wgpu::StoreOp::Store;
-	colorAttachment.clearValue = { .r = 0.0, .g = 0.0, .b = 0.0, .a = 1.0 };
-
-	wgpu::RenderPassDepthStencilAttachment depthAttachment{};
-	depthAttachment.depthLoadOp = wgpu::LoadOp::Clear;
-	depthAttachment.depthStoreOp = wgpu::StoreOp::Store;
-	depthAttachment.depthClearValue = 1.0f;
-	depthAttachment.view = ctx.depthView;
-
-	wgpu::RenderPassDescriptor renderPassDesc{};
-	renderPassDesc.colorAttachmentCount = 1;
-	renderPassDesc.colorAttachments = &colorAttachment;
-	renderPassDesc.depthStencilAttachment = &depthAttachment;
-
-	wgpu::CommandEncoder encoder = ctx.device.CreateCommandEncoder();
-	wgpu::RenderPassEncoder pass = encoder.BeginRenderPass(&renderPassDesc);
-	pass.SetPipeline(ctx.pipeline);
-
-	glm::vec3 cameraPos{ 0.0f, 5.0f, 10.0f };
-	glm::vec3 targetPos{ 0.0f, 0.0f, 0.0f };
-
-	auto playerView = registry.view<const PlayerTag, const Transform, PlayerController, Camera>();
-	for (auto [entity, transform, player, cam] : playerView.each()) {
 		if (player.camNeedSnap) {
 			cam.yaw = player.camYaw;
 			cam.pitch = player.camPitch;
@@ -294,16 +299,26 @@ void render(entt::registry& registry, float deltaTime, float alpha) {
 			horizontal * std::cos(cam.yaw)
 		};
 
-		targetPos = visualPos;
-		cameraPos = visualPos + up + offset;
+		glm::vec3 targetPos = visualPos;
+		glm::vec3 cameraPos = visualPos + up + offset;
+
+		glm::mat4 proj = glm::perspectiveZO(glm::radians(75.0f), ctx.aspect, 0.2f, 1000.0f);
+		glm::mat4 view = glm::lookAt(cameraPos, targetPos, glm::vec3(0.0f, 1.0f, 0.0f));
+		cam.viewProj = proj * view;
 	}
+}
 
-	glm::mat4 proj = glm::perspectiveZO(glm::radians(75.0f), ctx.aspect, 0.2f, 1000.0f);
-	glm::mat4 view = glm::lookAt(cameraPos, targetPos, glm::vec3(0.0f, 1.0f, 0.0f));
-	glm::mat4 vp = proj * view;
+void prepareScene(entt::registry& registry, float alpha) {
+	if (!ctx.device)
+		return;
 
-	auto renderableView = registry.view<const Transform, const Renderable>();
-	for (auto [entity, transform, renderable] : renderableView.each()) {
+	for (auto& [meshId, batch] : ctx.instanceBatches)
+		batch.clear();
+
+	// TODO: Frustum culling
+
+	auto instanceView = registry.view<const Transform, const StaticMeshInstance>();
+	for (auto [entity, transform, instance] : instanceView.each()) {
 		glm::vec3 visualPos = glm::mix(transform.prevPos, transform.pos, alpha);
 		glm::quat targetRot = transform.rot;
 		if (glm::dot(transform.prevRot, targetRot) < 0.0f) {
@@ -314,17 +329,72 @@ void render(entt::registry& registry, float deltaTime, float alpha) {
 		glm::mat4 model = glm::translate(glm::mat4(1.0f), visualPos);
 		model = model * glm::mat4_cast(visualRot);
 		model = glm::scale(model, transform.scale);
-		glm::mat4 mvp = vp * model;
 
-		ctx.queue.WriteBuffer(renderable.uniformBuffer, 0, &mvp, sizeof(glm::mat4));
-		pass.SetBindGroup(0, renderable.bindGroup);
-		pass.SetVertexBuffer(0, renderable.vertexBuffer);
-		pass.SetIndexBuffer(renderable.indexBuffer, wgpu::IndexFormat::Uint32, 0);
-
-		pass.DrawIndexed(renderable.indexCount);
+		ctx.instanceBatches[instance.meshId].push_back({ model });
 	}
-	pass.End();
+}
 
+void render(entt::registry& registry) {
+	if (!ctx.device)
+		return;
+
+	wgpu::SurfaceTexture surfaceTexture;
+	ctx.surface.GetCurrentTexture(&surfaceTexture);
+	if (!surfaceTexture.texture)
+		return;
+
+	glm::mat4 vp{ 1.0f };
+	auto camView{ registry.view<const Camera>() };
+	for (auto entity : camView) {
+		vp = camView.get<const Camera>(entity).viewProj;
+		break;
+	}
+	ctx.queue.WriteBuffer(ctx.frameUniformBuffer, 0, &vp, sizeof(glm::mat4));
+
+	for (const auto& [meshId, meshes] : ctx.instanceBatches) {
+		if (meshes.empty())
+			continue;
+
+		const auto& mesh{ ctx.meshes[meshId] };
+		ctx.queue.WriteBuffer(mesh.instanceBuffer, 0, meshes.data(), meshes.size() * sizeof(InstanceData));
+	}
+
+	wgpu::TextureView texView = surfaceTexture.texture.CreateView();
+
+	wgpu::RenderPassColorAttachment colorAttachment{};
+	colorAttachment.view = texView;
+	colorAttachment.loadOp = wgpu::LoadOp::Clear;
+	colorAttachment.storeOp = wgpu::StoreOp::Store;
+	colorAttachment.clearValue = { .r = 0.0, .g = 0.0, .b = 0.0, .a = 1.0 };
+
+	wgpu::RenderPassDepthStencilAttachment depthAttachment{};
+	depthAttachment.depthLoadOp = wgpu::LoadOp::Clear;
+	depthAttachment.depthStoreOp = wgpu::StoreOp::Store;
+	depthAttachment.depthClearValue = 1.0f;
+	depthAttachment.view = ctx.depthView;
+
+	wgpu::RenderPassDescriptor renderPassDesc{};
+	renderPassDesc.colorAttachmentCount = 1;
+	renderPassDesc.colorAttachments = &colorAttachment;
+	renderPassDesc.depthStencilAttachment = &depthAttachment;
+
+	wgpu::CommandEncoder encoder = ctx.device.CreateCommandEncoder();
+	wgpu::RenderPassEncoder pass = encoder.BeginRenderPass(&renderPassDesc);
+	pass.SetPipeline(ctx.pipelines[PipelineType::Opaque]);
+	pass.SetBindGroup(0, ctx.frameBindGroup);
+
+	for (const auto& [meshId, meshes] : ctx.instanceBatches) {
+		if (meshes.empty())
+			continue;
+
+		const auto& mesh{ ctx.meshes[meshId] };
+		pass.SetBindGroup(1, mesh.bindGroup);
+		pass.SetVertexBuffer(0, mesh.vertexBuffer);
+		pass.SetIndexBuffer(mesh.indexBuffer, wgpu::IndexFormat::Uint32, 0);
+		pass.DrawIndexed(mesh.indexCount, meshes.size(), 0, 0, 0);
+	}
+
+	pass.End();
 	wgpu::CommandBuffer command = encoder.Finish();
 	ctx.queue.Submit(1, &command);
 }

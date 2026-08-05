@@ -16,47 +16,50 @@
 
 namespace client::renderer {
 
-Renderable createRenderable(const MeshData& mesh) {
-	Renderable r{};
+uint32_t createSharedMesh(const MeshData& meshData) {
 	auto& ctx = getRenderContext();
+	static uint32_t meshId{ 1 };
 
-	wgpu::BufferDescriptor ubo{};
-	ubo.usage = wgpu::BufferUsage::Uniform | wgpu::BufferUsage::CopyDst;
-	ubo.size = sizeof(glm::mat4);
-	r.uniformBuffer = ctx.device.CreateBuffer(&ubo);
-
-	wgpu::BindGroupEntry bgEntry{};
-	bgEntry.binding = 0;
-	bgEntry.buffer = r.uniformBuffer;
-	bgEntry.size = sizeof(glm::mat4);
-
-	wgpu::BindGroupDescriptor bgDesc{};
-	bgDesc.layout = ctx.bindGroupLayout;
-	bgDesc.entryCount = 1;
-	bgDesc.entries = &bgEntry;
-	r.bindGroup = ctx.device.CreateBindGroup(&bgDesc);
-
-	r.indexCount = mesh.indices.size();
+	SharedMesh mesh{};
+	mesh.indexCount = meshData.indices.size();
 
 	wgpu::BufferDescriptor vbo{};
 	vbo.usage = wgpu::BufferUsage::Vertex | wgpu::BufferUsage::CopyDst;
-	vbo.size = sizeof(float) * mesh.vertices.size();
-	r.vertexBuffer = ctx.device.CreateBuffer(&vbo);
-	ctx.queue.WriteBuffer(r.vertexBuffer, 0, mesh.vertices.data(), vbo.size);
+	vbo.size = sizeof(float) * meshData.vertices.size();
+	mesh.vertexBuffer = ctx.device.CreateBuffer(&vbo);
+	ctx.queue.WriteBuffer(mesh.vertexBuffer, 0, meshData.vertices.data(), vbo.size);
 
 	wgpu::BufferDescriptor ibo{};
 	ibo.usage = wgpu::BufferUsage::Index | wgpu::BufferUsage::CopyDst;
-	ibo.size = sizeof(uint32_t) * mesh.indices.size();
-	r.indexBuffer = ctx.device.CreateBuffer(&ibo);
-	ctx.queue.WriteBuffer(r.indexBuffer, 0, mesh.indices.data(), ibo.size);
+	ibo.size = sizeof(uint32_t) * meshData.indices.size();
+	mesh.indexBuffer = ctx.device.CreateBuffer(&ibo);
+	ctx.queue.WriteBuffer(mesh.indexBuffer, 0, meshData.indices.data(), ibo.size);
 
-	return r;
+	wgpu::BufferDescriptor instBufDesc{};
+	instBufDesc.usage = wgpu::BufferUsage::Storage | wgpu::BufferUsage::CopyDst;
+	instBufDesc.size = sizeof(InstanceData) * ctx.maxInstances;
+	mesh.instanceBuffer = ctx.device.CreateBuffer(&instBufDesc);
+
+	wgpu::BindGroupEntry bgEntry{};
+	bgEntry.binding = 0;
+	bgEntry.buffer = mesh.instanceBuffer;
+	bgEntry.size = sizeof(InstanceData) * ctx.maxInstances;
+
+	wgpu::BindGroupDescriptor bgDesc{};
+	bgDesc.layout = ctx.meshBindGroupLayout;
+	bgDesc.entryCount = 1;
+	bgDesc.entries = &bgEntry;
+	mesh.bindGroup = ctx.device.CreateBindGroup(&bgDesc);
+
+	uint32_t id{ meshId++ };
+	ctx.meshes[id] = mesh;
+	return id;
 }
 
 MeshData createMeshCube() {
-	MeshData mesh{};
+	MeshData meshData{};
 	// clang-format off
-	mesh.vertices = {
+	meshData.vertices = {
 		-1, -1,  1,   1, 0, 0,
 		 1, -1,  1,   0, 1, 0,
 		 1,  1,  1,   0, 0, 1,
@@ -66,16 +69,16 @@ MeshData createMeshCube() {
 		 1,  1, -1,   1, 1, 1,
 		-1,  1, -1,   0, 0, 0
 	};
-	mesh.indices = {
+	meshData.indices = {
 		0,1,2, 2,3,0, 1,5,6, 6,2,1, 5,4,7, 7,6,5,
 		4,0,3, 3,7,4, 3,2,6, 6,7,3, 4,5,1, 1,0,4
 	};
 	// clang-format on
-	return mesh;
+	return meshData;
 }
 
 std::optional<MeshData> loadMesh(const std::string& filepath) {
-	MeshData mesh{};
+	MeshData meshData{};
 	cgltf_options opts{};
 	cgltf_data* data{ nullptr };
 
@@ -108,22 +111,21 @@ std::optional<MeshData> loadMesh(const std::string& filepath) {
 				if (accNormal)
 					cgltf_accessor_read_float(accNormal, i, normal.data(), 3);
 
-				mesh.vertices.push_back(pos[0]);
-				mesh.vertices.push_back(pos[1]);
-				mesh.vertices.push_back(pos[2]);
+				meshData.vertices.push_back(pos[0]);
+				meshData.vertices.push_back(pos[1]);
+				meshData.vertices.push_back(pos[2]);
 
-				mesh.vertices.push_back((normal[0] + 1.0f) * 0.5f);
-				mesh.vertices.push_back((normal[1] + 1.0f) * 0.5f);
-				mesh.vertices.push_back((normal[2] + 1.0f) * 0.5f);
+				meshData.vertices.push_back(normal[0]);
+				meshData.vertices.push_back(normal[1]);
+				meshData.vertices.push_back(normal[2]);
 			}
 		}
 
 		for (cgltf_size i{}; i < prim->indices->count; ++i)
-			mesh.indices.push_back(static_cast<uint32_t>(cgltf_accessor_read_index(prim->indices, i)));
+			meshData.indices.push_back(static_cast<uint32_t>(cgltf_accessor_read_index(prim->indices, i)));
 	}
 
 	cgltf_free(data);
-
-	return mesh;
+	return meshData;
 }
 }

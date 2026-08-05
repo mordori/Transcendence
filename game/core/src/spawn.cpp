@@ -112,7 +112,7 @@ entt::entity ball(entt::registry& registry, b3WorldId worldId) {
 
 entt::entity player(entt::registry& registry, b3WorldId worldId) {
 	auto player{ registry.create() };
-	registry.emplace<InputComponent>(player);
+	registry.emplace<PlayerTag>(player);
 	auto& controller{ registry.emplace<PlayerController>(player) };
 
 	Transform t{ .pos = core::rules::playerSpawnPoints[0] };
