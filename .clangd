@@ -9,8 +9,8 @@ CompileFlags:
     - "-Werror"
     - "-D__EMSCRIPTEN__=1"
     # - "--target=wasm32-unknown-emscripten"
-    # - "--sysroot=/home/mikax/tools/emsdk/upstream/emscripten/cache/sysroot"
-    # - "-I/home/mikax/tools/emsdk/upstream/emscripten/cache/ports/emdawnwebgpu/emdawnwebgpu/include"
+    # - "--sysroot=/home/goinfre/tools/emsdk/upstream/emscripten/cache/sysroot"
+    # - "-I/home/goinfre/tools/emsdk/upstream/emscripten/cache/ports/emdawnwebgpu/emdawnwebgpu/include"
   Remove:
     - "--use-port=*"
     - "-s*"

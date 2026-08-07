@@ -5,6 +5,7 @@
 
 #include "components/physics.hpp"
 #include "entt/entity/fwd.hpp"
+#include "include/network.hpp"
 #include "match.hpp"
 #include "physics.hpp"
 #include "spawn.hpp"
@@ -45,6 +46,8 @@ int main() {
 
 	core::physics::setup(registry);
 	core::match::setup(registry);
+
+	server::network::init(9001);
 
 	// TODO: Signal handler for shutdown
 	bool isRunning{ true };

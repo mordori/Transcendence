@@ -14,6 +14,7 @@
 #include "entt/entt.hpp"
 #include "input.hpp"
 #include "match.hpp"
+#include "network.hpp"
 #include "physics.hpp"
 #include "renderer.hpp"
 #include "spawn.hpp"
@@ -99,6 +100,7 @@ int main() {
 	auto* _client = new Client();
 	// _client = new Client();
 
+	client::network::setup(_client);
 	core::physics::setup(_client->registry);
 	client::audio::setup(_client->registry);
 	auto worldId{ _client->registry.ctx().get<World>().id };

@@ -37,6 +37,7 @@ set_target_properties(${TARGET_NAME} PROPERTIES
 target_compile_options(${TARGET_NAME} PRIVATE "--use-port=emdawnwebgpu")
 
 target_link_options(${TARGET_NAME} PRIVATE
+	"-lwebsocket.js"
 	"-sWASM=1"
 	"-sEXIT_RUNTIME=1"
 	"-sALLOW_MEMORY_GROWTH=1"

@@ -1,8 +1,10 @@
 #pragma once
 
 #include <cstdint>
+#include <unordered_map>
 #include <vector>
 
+#include "entt/entity/fwd.hpp"
 #include "glm/ext/vector_float3.hpp"
 #include "glm/fwd.hpp"
 #include "glm/gtc/quaternion.hpp"
@@ -21,4 +23,8 @@ struct Snapshot {
 	uint32_t tick{};
 	std::vector<EntityState> players;
 	std::vector<EntityState> balls;
+};
+
+struct NetworkMap {
+	std::unordered_map<uint32_t, entt::entity> map;
 };

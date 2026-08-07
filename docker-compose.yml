@@ -16,10 +16,29 @@ services:
       - "8080:80"
     depends_on:
       - frontend
+      - game-server
       # - backend
-      # - game-server
     networks:
       - network
+
+  game-server:
+    build:
+      context: .
+      dockerfile: ./game/server/Dockerfile
+    container_name: game-server
+    restart: unless-stopped
+    networks:
+      - network
+    ports:
+      - "9001:9001"
+
+  # game-ai:
+  #   build:
+  #     context: .
+  #     dockerfile: ./game/ai/Dockerfile
+  #   restart: unless-stopped
+  #   networks:
+  #     - network
 
   # backend:
   #   build:
@@ -30,26 +49,6 @@ services:
   #   depends_on:
   #     - database
   #     - redis
-  #   networks:
-  #     - network
-
-  # game-server:
-  #   build:
-  #     context: .
-  #     dockerfile: ./game/server/Dockerfile
-  #   restart: unless-stopped
-  #   environment:
-  #     - name=value
-  #   depends_on:
-  #     - redis
-  #   networks:
-  #     - network
-
-  # game-ai:
-  #   build:
-  #     context: .
-  #     dockerfile: ./game/ai/Dockerfile
-  #   restart: unless-stopped
   #   networks:
   #     - network
 

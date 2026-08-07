@@ -124,17 +124,23 @@ void update(entt::registry& registry, float fixedTimeStep) {
 			break;
 		case State::ONGOING:
 			match.timer += fixedTimeStep;
+			static bool isOvertime{};
 			if (match.timer >= core::rules::matchDuration) {
 				if (match.scoreRed == match.scoreBlue) {
-					std::cout << "OVERTIME\n";
+					if (!isOvertime) {
+						std::cout << "OVERTIME\n";
+						isOvertime = true;
+					}
 					break;
 				}
+
 				if (match.scoreRed > match.scoreBlue)
 					std::cout << "RED TEAM WINS!\n";
 				else
 					std::cout << "BLUE TEAM WINS!\n";
 				match.state = State::END;
 				match.stateTimer = 0.0f;
+				isOvertime = false;
 			}
 			break;
 		case State::END:
