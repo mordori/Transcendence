@@ -25,7 +25,7 @@ build:
 run:
 	@docker compose up -d --build
 	@echo
-	@echo -e "$(GREEN)✔$(COLOR)  Build successful and running: $(YELLOW)https://localhost/$(COLOR)"
+	@echo -e "$(GREEN)✔$(COLOR)  Build successful and running: $(YELLOW)https://localhost:8443$(COLOR)"
 	@echo
 
 dev: build
@@ -107,7 +107,7 @@ dependencies:
 
 deps-42:
 	@echo -e "$(BLUE)Setting up 42 cluster environment (Rootless)...$(COLOR)"
-	@mkdir -p $$HOME/tools/bin
+	@mkdir -p $$HOME/tools/bin $$HOME/goinfre/tools
 	@echo -e "$(YELLOW)Downloading local CMake...$(COLOR)"
 	@curl -fsSL https://github.com/Kitware/CMake/releases/download/v3.29.3/cmake-3.29.3-linux-x86_64.tar.gz | tar -xz -C $$HOME/tools --strip-components=1
 	@echo -e "$(YELLOW)Downloading local Ninja...$(COLOR)"
@@ -119,22 +119,22 @@ deps-42:
 	else \
 		echo -e "$(GREEN)Docker is already running.$(COLOR)"; \
 	fi
-	@if [ ! -d "$$HOME/tools/emsdk" ]; then \
+	@if [ ! -d "$$HOME/goinfre/tools/emsdk" ]; then \
 		echo -e "$(YELLOW)Downloading emsdk...$(COLOR)"; \
-		cd $$HOME/tools && git clone https://github.com/emscripten-core/emsdk.git; \
+		cd $$HOME/goinfre/tools && git clone https://github.com/emscripten-core/emsdk.git; \
 	else \
 		echo -e "$(GREEN)emsdk already exists. Updating...$(COLOR)"; \
-		cd $$HOME/tools/emsdk && git pull; \
+		cd $$HOME/goinfre/tools/emsdk && git pull; \
 	fi
-	@cd $$HOME/tools/emsdk && ./emsdk install latest && ./emsdk activate latest
+	@cd $$HOME/goinfre/tools/emsdk && ./emsdk install latest && ./emsdk activate latest
 	@RC_FILE=$$(if [[ $$SHELL == *"zsh"* ]]; then echo "$$HOME/.zshrc"; else echo "$$HOME/.bashrc"; fi); \
 	if ! grep -q "emsdk_env.sh" "$$RC_FILE" 2>/dev/null; then \
 		echo -e "\n# 42 Build Tools & Emscripten" >> "$$RC_FILE"; \
 		echo 'export PATH="$$HOME/tools/bin:$$PATH"' >> "$$RC_FILE"; \
-		echo 'source $$HOME/tools/emsdk/emsdk_env.sh > /dev/null 2>&1' >> "$$RC_FILE"; \
+		echo 'source $$HOME/goinfre/tools/emsdk/emsdk_env.sh > /dev/null 2>&1' >> "$$RC_FILE"; \
 	fi
 	@echo
-	@echo -e "$(GREEN)42 Cluster tools installed to ~/tools !$(COLOR)"
+	@echo -e "$(GREEN)42 Cluster tools installed to ~/tools and ~/goinfre/tools !$(COLOR)"
 	@echo -e "$(YELLOW)To apply the changes to your current terminal, run:$(COLOR)"
 	@if [[ $$SHELL == *"zsh"* ]]; then echo -e "  source ~/.zshrc"; else echo -e "  source ~/.bashrc"; fi
 	@echo

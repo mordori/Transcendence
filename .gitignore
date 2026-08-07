@@ -1,6 +1,9 @@
 # .env
 # secrets/
 
+# *.glb
+# assets/
+
 .vscode/
 node_modules/
 build/

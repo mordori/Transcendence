@@ -17,6 +17,7 @@
 #include "glm/ext/vector_float3.hpp"
 #include "glm/fwd.hpp"
 #include "glm/trigonometric.hpp"
+#include "rules.hpp"
 
 namespace core::spawn {
 
@@ -82,7 +83,7 @@ entt::entity ball(entt::registry& registry, b3WorldId worldId) {
 	auto ball{ registry.create() };
 	registry.emplace<BallTag>(ball);
 
-	Transform t{ .pos = { 0.0f, 2.0f, 0.0f }, .scale = { 4.0f, 4.0f, 4.0f } };
+	Transform t{ .pos = core::rules::ballSpawnPoint, .scale = { 4.0f, 4.0f, 4.0f } };
 	t.prevPos = t.pos;
 	registry.emplace<Transform>(ball, t);
 
@@ -100,7 +101,6 @@ entt::entity ball(entt::registry& registry, b3WorldId worldId) {
 	shapeDef.density = 0.0001f;
 	shapeDef.baseMaterial.friction = 0.1f;
 	shapeDef.baseMaterial.restitution = 0.5f;
-	// to know when car hits the ball
 	shapeDef.enableHitEvents = true;
 
 	b3Sphere sphere{ .center = b3Vec3_zero, .radius = 2.0f };
@@ -112,10 +112,10 @@ entt::entity ball(entt::registry& registry, b3WorldId worldId) {
 
 entt::entity player(entt::registry& registry, b3WorldId worldId) {
 	auto player{ registry.create() };
-	registry.emplace<InputComponent>(player);
+	registry.emplace<PlayerTag>(player);
 	auto& controller{ registry.emplace<PlayerController>(player) };
 
-	Transform t{ .pos = { 0.0f, 0.5f, 10.0f } };
+	Transform t{ .pos = core::rules::playerSpawnPoints[0] };
 	t.prevPos = t.pos;
 	registry.emplace<Transform>(player, t);
 

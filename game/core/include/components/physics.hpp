@@ -12,7 +12,7 @@
 
 struct PlayerTag {};
 struct BallTag {
-	bool hasExploded{};
+	bool hasScored{};
 };
 
 enum Category : uint32_t {
@@ -29,7 +29,8 @@ struct PlayerController {
 	bool isGrounded{};
 	float steeringAngle{};
 	float camYaw{};
-	float camPitch{ 0.2f };
+	float camPitch{};
+	bool camNeedSnap{};
 	entt::entity wheelFL{ entt::null };
 	entt::entity wheelFR{ entt::null };
 	entt::entity wheelRL{ entt::null };

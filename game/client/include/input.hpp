@@ -5,7 +5,7 @@
 
 namespace client::input {
 
-struct LocalPlayerCtx {
+struct LocalPlayer {
 	entt::entity id;
 };
 
